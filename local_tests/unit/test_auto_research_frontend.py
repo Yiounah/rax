@@ -180,7 +180,10 @@ def test_deploy_copies_skills_rubric_and_confines_the_agent(tmp_path, monkeypatc
     workspace, published = deployed['workspace'].resolve(), (config.root/'published').resolve()
     assert filesystem[str(workspace)] == 'write' and filesystem[str(workspace/'.codex')] == 'read'
     assert filesystem[str(published)] == 'write' and filesystem[str(published/'runs')] == 'read'
-    assert any(filesystem.get(str(path.resolve())) == 'deny' for path in agent_host.repositories())
+    assert filesystem[':root'] == 'deny' and filesystem[':minimal'] == 'read'
+    for repository in agent_host.repositories():
+        assert not any(not path.startswith(':') and repository.resolve().is_relative_to(path)
+                       for path, mode in filesystem.items() if mode in ('read', 'write'))
     assert filesystem[str(config.root.resolve().parent)] == 'deny'
     assert settings['model_reasoning_effort'] == config.agent_effort == 'xhigh'
     # Otherwise Codex's own defaults (compaction included).

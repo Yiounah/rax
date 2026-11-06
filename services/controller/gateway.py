@@ -174,11 +174,14 @@ class Gateway:
         if not isinstance(arguments, dict):
             raise ValueError("Arguments must be an object")
         self._audit({"event": "mcp_request", "tool": name, "arguments": arguments})
+        # rax 通过 MCP 把 gemini_generate 放进它的工具菜单。所以在这里的请求会被转发给 Gemini 服务，并获取响应。
         if name == "gemini_generate":
             self.stage = 'api_validation'
             if self.gemini is None:
                 raise RuntimeError("Gemini is not configured")
             payload, reservation = self.gemini.prepare(arguments)
+        # ------------------------------------------------    
+        # 这里开始是 Gemini 服务的响应处理。
             cost_reservation = reserve_cost(reservation, payload['max_tokens'])
             self.stage = 'api_budget'
             self.charge(reservation, cost_reservation)  # Durable reservations before billable I/O.

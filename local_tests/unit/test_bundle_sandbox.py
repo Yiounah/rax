@@ -42,9 +42,9 @@ def sandbox_runtime(host_artifact_root):
     """A real session directory under the host's artifact root, as production creates them."""
     if not shutil.which('bwrap'):
         pytest.skip('bubblewrap required')
-    root = (Path(__file__).resolve().parents[2] / 'runtime').resolve()
-    if not root.is_relative_to(host_artifact_root) or not os.access(root, os.W_OK):
-        pytest.skip(f'Writable runtime/ under the artifact root {host_artifact_root} required')
+    root = host_artifact_root.resolve()
+    if not root.is_dir() or not os.access(root, os.W_OK):
+        pytest.skip(f'Writable artifact root {host_artifact_root} required')
     parent = root / 'integration-tests'
     parent.mkdir(exist_ok=True)
     output = Path(tempfile.mkdtemp(prefix='bundle-sandbox-', dir=parent))

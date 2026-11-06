@@ -1,8 +1,10 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash 
+# shebang, 使用 bash 脚本运行
 # Build runtime/envs/host: the harness's own Python environment (launchers, MCP service, workspace
 # generator, dashboard, tests), which is also the agent's Python (harness/agent_host.py). It holds no
 # simulator; each backend's simulator has its own environment. Usage: bash scripts/setup_host_env.sh
-set -euo pipefail
+# bash scripts/setup_host_env.sh 会在仓库里装好一份 host Python 环境，路径是 runtime/envs/host
+set -euo pipefail #任一步失败（下载、校验、conda、pip、导入）脚本会立刻退出
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/host_env.sh"
 source "$RAX_PROJECT_ROOT/dependencies.lock"
@@ -33,3 +35,5 @@ import cv2, h5py, jinja2, msgpack, numpy, PIL, scipy, torch, torchvision, yaml, 
 print("host packages import")
 PY
 echo "Host environment ready: $RAX_HOST_ENV_ROOT"
+
+

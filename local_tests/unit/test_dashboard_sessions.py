@@ -172,7 +172,8 @@ def test_prepare_is_config_only_and_pins_selected_task(dashboard, monkeypatch):
     assert not list(dashboard.root.glob('*/launch-request.json'))
 
 
-def test_configure_writes_only_the_simulator_gpu(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize('separate_artifacts', [False, True])
+def test_configure_writes_only_the_simulator_gpu(tmp_path, monkeypatch, capsys, separate_artifacts):
     """The command the dashboard runs: the agent has no GPU, so only --sim-gpu exists."""
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'scripts'))
     try:
@@ -184,7 +185,12 @@ def test_configure_writes_only_the_simulator_gpu(tmp_path, monkeypatch, capsys):
         return '0, GPU-aaaa\n1, GPU-bbbb\n'
     monkeypatch.setattr(configure.subprocess, 'check_output', check_output)
     monkeypatch.setattr(configure, 'PROJECT', tmp_path)
-    monkeypatch.setenv('RAX_ARTIFACT_ROOT', str(tmp_path))
+    artifact_root = tmp_path / 'local-artifacts' if separate_artifacts else tmp_path
+    monkeypatch.setenv('RAX_ARTIFACT_ROOT', str(artifact_root))
+    if separate_artifacts:
+        (artifact_root / 'auto-research').mkdir(parents=True)
+        (tmp_path / 'runtime').mkdir()
+        (tmp_path / 'runtime' / 'auto-research').symlink_to(artifact_root / 'auto-research')
     base = ['configure', '--task', TASK, '--demonstration-context', 'none']
     monkeypatch.setattr(sys, 'argv', [*base, '--sim-gpu', '1', '--research-gpu', '0'])
     with pytest.raises(SystemExit):
@@ -194,6 +200,9 @@ def test_configure_writes_only_the_simulator_gpu(tmp_path, monkeypatch, capsys):
     configure.main()
     path = Path(capsys.readouterr().out.strip())
     saved = json.loads(path.read_text())
+    assert path.parent.parent == tmp_path / 'runtime' / 'auto-research'
+    assert Path(saved['root']) == path.parent.resolve()
+    assert Path(saved['root']).is_relative_to(artifact_root)
     assert saved['sim_gpu'] == 'GPU-bbbb' and not {'controller_gpu', 'training_gpu'} & set(saved)
     from services.controller.config import Configuration
     assert Configuration.from_dict(saved).sim_gpu == 'GPU-bbbb'

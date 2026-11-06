@@ -28,7 +28,7 @@ def secret_probes():
               for path in sorted(secret.iterdir()) if path.is_file())]
 
 
-@pytest.mark.parametrize('case', ['none', 'pause'])
+@pytest.mark.parametrize('case', ['none', 'pause', 'proxy'])
 def test_real_native_codex_shell_tools_and_sandbox(sandbox_runtime, monkeypatch, case):
     # A regression must fail this fixture, not inherit the 20-day call timeout.
     monkeypatch.setattr('harness.codex_cli.auto_research.CALL_SECONDS', 120)
@@ -39,7 +39,10 @@ def test_real_native_codex_shell_tools_and_sandbox(sandbox_runtime, monkeypatch,
     config = configuration(root)
     workspace = config.root/'agent-workspace'
     secret = root/'test-key'
-    requests, pauses = [], []
+    requests, pauses, request_paths, sandbox_proxy_requests = [], [], [], []
+    for name in ('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY',
+                 'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy'):
+        monkeypatch.delenv(name, raising=False)
     smoke = '''from pathlib import Path
 import os, socket, struct, zlib, importlib.util
 WORKSPACE = Path(WORKSPACE_PATH)
@@ -96,6 +99,13 @@ except OSError:
     pass
 else:
     raise AssertionError('Internet accessible')
+if PROXY_CASE:
+    try:
+        socket.create_connection(('127.0.0.1', UPSTREAM_PORT), timeout=.2).close()
+    except OSError:
+        pass
+    else:
+        raise AssertionError('Sandbox reached the host proxy port directly')
 import subprocess
 subprocess.run(['git', '--version'], check=True)
 subprocess.run(['rg', '--version'], check=True)
@@ -120,13 +130,30 @@ text(await tools[status.name]({}));
 text(await tools.exec_command({cmd: COMMAND, yield_time_ms: 10000}));
 const result = await tools.view_image({path: SMOKE});
 image(result.image_url);
+if (PROXY_CASE) {
+  try {
+    text(await tools.exec_command({cmd: PROXY_PROBE, yield_time_ms: 10000}));
+  } catch (error) {
+    if (!String(error).includes('blocked')) throw error;
+    text('sandbox-proxy-denied');
+  }
+}
 '''.replace('COMMAND', json.dumps('python -c '+shlex.quote(smoke))).replace('SMOKE', json.dumps(str(workspace/'smoke.png')))
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_):
             pass
 
+        def do_GET(self):
+            sandbox_proxy_requests.append(self.path)
+            body = b'upstream proxy reached'
+            self.send_response(200)
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def do_POST(self):
+            request_paths.append(self.path)
             assert self.headers.get('Authorization') == 'Bearer fixture-private-secret'
             raw = self.rfile.read(int(self.headers['Content-Length']))
             if self.headers.get('Content-Encoding') == 'gzip':
@@ -176,12 +203,35 @@ image(result.image_url);
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+        base_url = f'http://127.0.0.1:{server.server_port}'
+        if case == 'proxy':
+            # This hostname cannot resolve: native Codex must use the inherited proxy.
+            base_url = 'http://model-proxy-fixture.invalid'
+            upstream = f'http://127.0.0.1:{server.server_port}'
+            for name in ('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy'):
+                monkeypatch.setenv(name, upstream)
+            for name in ('NO_PROXY', 'no_proxy'):
+                monkeypatch.setenv(name, 'localhost,127.0.0.1,::1')
+        # A denied managed-proxy request can fail exec_command itself, before Python's
+        # result reaches the caller. Probe separately so the successful tool smoke remains visible.
+        proxy_probe = '''from urllib.request import urlopen
+try:
+    with urlopen('http://model-proxy-fixture.invalid/sandbox-network-probe', timeout=3):
+        pass
+except OSError:
+    print('sandbox-proxy-denied')
+else:
+    raise AssertionError('Sandbox reached the upstream model proxy')
+'''
+        action = action.replace('if (PROXY_CASE)', 'if ('+json.dumps(case == 'proxy')+')')
+        action = action.replace('PROXY_CASE', repr(case == 'proxy')).replace('UPSTREAM_PORT', str(server.server_port))
+        action = action.replace('PROXY_PROBE', json.dumps('python -c '+shlex.quote(proxy_probe)))
         provider = root/'provider'
         provider.mkdir()
         (provider/'openrouter.config.toml').write_text(f'''model_provider="openrouter"
 [model_providers.openrouter]
 name="Local fixture"
-base_url="http://127.0.0.1:{server.server_port}"
+base_url="{base_url}"
 wire_api="responses"
 request_max_retries=0
 stream_max_retries=0
@@ -192,7 +242,7 @@ stream_max_retries=0
         assert deployed['workspace'] == workspace
         settings = tomllib.loads((deployed['codex_home']/'config.toml').read_text())
         # Codex's own defaults: only the login's provider, the sandbox and the robot tools are set.
-        assert settings['model_providers']['session']['base_url'] == f'http://127.0.0.1:{server.server_port}'
+        assert settings['model_providers']['session']['base_url'] == base_url
         assert settings['model_providers']['session']['env_key'] == 'RAX_MODEL_KEY'
         assert 'fixture-private-secret' not in (deployed['codex_home']/'config.toml').read_text()
         assert settings['approval_policy'] == 'never' and settings['web_search'] == 'disabled'
@@ -212,6 +262,9 @@ stream_max_retries=0
             assert pauses == ['paused', 'unpaused'], (pauses, stdout, stderr)
         assert result.returncode == 0, (stdout, stderr)
         assert len(requests) == 2
+        if case == 'proxy':
+            assert all(path.startswith(base_url + '/') for path in request_paths), request_paths
+            assert not any('sandbox-network-probe' in path for path in sandbox_proxy_requests)
         events = [json.loads(line) for line in stdout.splitlines() if line.startswith('{')]
         status_calls = [event for event in events if event.get('type') == 'item.completed'
                         and event.get('item', {}).get('type') == 'mcp_tool_call'
@@ -222,6 +275,8 @@ stream_max_retries=0
         assert results, (stdout, stderr)
         serialized = json.dumps(results)
         assert 'native-python-ready' in serialized, serialized[-3000:]
+        if case == 'proxy':
+            assert 'sandbox-proxy-denied' in serialized, serialized[-3000:]
         assert (workspace/'execution-count.txt').read_text() == 'executed\n'
         assert 'status' in serialized and 'manual_success_confirmed' in serialized
         unescaped = serialized.replace('\\"', '"')

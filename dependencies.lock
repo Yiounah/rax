@@ -1,9 +1,11 @@
 # Pins of every external source and environment. Sourced by the setup scripts.
+# 依赖版本
 
 # Miniforge installs the conda that builds runtime/envs/host and the simulator environments.
 MINIFORGE_VERSION=26.7.2-0
 MINIFORGE_SHA256=281b0ac7d550802efc81af633225a5e6116d29ae72f3ab4eae7168c3931a4c05
 # The host environment (scripts/setup_host_env.sh): the harness's own packages.
+# 主环境，也就是harness自己的运行环境
 HOST_PYTHON_VERSION=3.12
 HOST_NUMPY_VERSION=2.5.2
 HOST_PILLOW_VERSION=12.3.0
@@ -16,18 +18,22 @@ HOST_SCIPY_VERSION=1.18.1
 HOST_PYTEST_VERSION=9.1.1
 # The agent's commands and submitted programs run this environment's Python (harness/agent_host.py):
 # its analysis packages, CPU-only, as the container branch's agent image has them.
-HOST_OPENCV_VERSION=5.0.0.93
+# agent 提交的程序实际跑的 Python 环境（harness/agent_host.py），只装 CPU 版深度学习库。
+HOST_OPENCV_VERSION=5.0.0.93 
 AGENT_TORCH_VERSION=2.11.0
 AGENT_TORCHVISION_VERSION=0.26.0
 AGENT_TORCH_INDEX=https://download.pytorch.org/whl/cpu
 AGENT_H5PY_VERSION=3.16.0
+# HOST 包和 AGENT 包（CPU 版 PyTorch、h5py、OpenCV）会装进同一个环境。
+# 这个环境里没有模拟器，每个后端的模拟器有自己独立的环境，例如 LIBERO-PRO 在 runtime/envs/libero_pro。
 
+# 模拟器子进程专用的 LIBERO-PRO 后端（runtime/envs/libero_pro），官方安装不加改动，Python 3.8.13。
 # LIBERO-PRO simulator backend (official, unmodified), used only by the simulator subprocess in
 # runtime/envs/libero_pro: the official LIBERO install (Python 3.8.13, requirements.txt verbatim)
 # plus three documented additions (docs/LIBERO_PRO_BACKEND.md): MuJoCo pinned (upstream leaves it
 # open and >= 3.4 breaks LIBERO's init-state settling), the CPU build of the official torch version
 # (only torch.load of init states runs in the simulator), and msgpack for the simulator RPC.
-LIBERO_PRO_URL=https://github.com/Zxy-MLlab/LIBERO-PRO.git
+LIBERO_PRO_URL=https://github.com/Zxy-MLlab/LIBERO-PRO.git  # 官方代码仓库
 LIBERO_PRO_COMMIT=eafdb809426b13153aa1e4c42d6601844217dfec
 LIBERO_PRO_PYTHON_VERSION=3.8.13
 LIBERO_PRO_MUJOCO_VERSION=3.2.3

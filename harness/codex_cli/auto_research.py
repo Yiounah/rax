@@ -38,6 +38,10 @@ KEY_VARIABLE = 'RAX_MODEL_KEY'
 LOGIN_FILE = 'agent-login.json'  # The session's login (a path or a key file's path, never a secret).
 PID_FILE = 'agent.pid'  # The running agent CLI, frozen by the frontend during register/rehearse.
 PERMISSIONS = 'agent'
+# The native CLI uses the operator's proxy for model/account requests. Its command
+# sandbox still enforces the separate network policy; do not inherit the whole host env.
+MODEL_PROXY_VARIABLES = ('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY',
+                         'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy')
 
 
 def populate_workspace(config, workspace, contract=None, *, formal_episode=False):
@@ -267,13 +271,22 @@ def protected(workspace):
 
 
 def permissions(config, deployed, socket):
-    """Codex's permission profile for the agent's commands: write only the workspace (and the
-    robot socket's directory), hide the repository, the sessions and host sockets, and no
-    internet: the managed proxy allows no domain, while local Unix sockets stay reachable."""
+    """A minimal readable host view, with only this agent's working paths writable.
+
+    Starting from a denied root avoids overlaying every private Ceph/FUSE entry with a
+    synthetic mount. Python environments and the Codex install are exposed explicitly;
+    credentials, other sessions and the repository remain outside the readable view.
+    """
     workspace = Path(deployed['workspace']).resolve()
     exposed = readable(config, deployed)
-    filesystem = {str(path): 'deny' for path in agent_host.hidden_paths(config.root, carved=True,
-                                                                        kept=exposed['references'])}
+    filesystem = {':root': 'deny', ':minimal': 'read'}
+    for path in (*agent_host.reexposed_paths(), *exposed['references']):
+        filesystem[str(Path(path).resolve())] = 'read'
+    # :workspace grants temporary-directory access. Keep other robot and host sockets
+    # hidden even when their directories are below one of those temporary roots.
+    for path in (Path(config.root).resolve().parent, agent_host.SOCKETS, *agent_host.HOST_SOCKETS):
+        if agent_host._exists(path):
+            filesystem[str(Path(path).resolve())] = 'deny'
     for path in (workspace, Path(socket).parent, *exposed['write']):
         filesystem[str(Path(path).resolve())] = 'write'
     # Project configuration there would configure Codex itself, the sandbox included.
@@ -354,8 +367,13 @@ def agent_command(config, deployed, *, prompt, interactive=False, json_output=Fa
         command += ['--skip-git-repo-check']
         if json_output:
             command.append('--json')
-    elif deployed.get('resume_session'):
-        command.append('resume')
+    else:
+        # Keep the interactive app server in the launcher's process tree. A shared
+        # daemon copies itself under the private CODEX_HOME/packages directory,
+        # which is intentionally hidden from this session's command sandbox.
+        command.append('--no-daemon')
+        if deployed.get('resume_session'):
+            command.append('resume')
     if deployed.get('resume_session'):
         command.append(deployed['resume_session'])
     command.append(prompt)
@@ -364,11 +382,12 @@ def agent_command(config, deployed, *, prompt, interactive=False, json_output=Fa
 
 def agent_environment(config, deployed, socket):
     """Codex's process environment: its session home, the robot socket and the agent's
-    Python; a key-based login's key for Codex itself."""
+    Python, the operator's transport proxy, and a key-based login's key for Codex itself."""
     workspace = Path(deployed['workspace']).resolve()
     environment = agent_host.environment(home=workspace, workspace=workspace, socket=socket,
                                          cpus=config.training.cpus, binary=deployed['codex'])
     environment['CODEX_HOME'] = str(Path(deployed['codex_home']).resolve())
+    environment.update({name: os.environ[name] for name in MODEL_PROXY_VARIABLES if name in os.environ})
     login = json.loads(deployed['login'].read_text())
     if login.get('key_file'):
         environment[KEY_VARIABLE] = load_key(login['key_file'])

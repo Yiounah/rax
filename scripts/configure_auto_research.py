@@ -124,7 +124,8 @@ def main():
     data_bytes = args.recording_gib*1024**3
     def limits(seconds, memory=8192):
         return Limits(seconds, memory, 4, 256, 1024, data_bytes)
-    config = Configuration(root, args.task,
+    # Session storage may be linked from the runtime on shared storage to a local disk.
+    config = Configuration(root.resolve(), args.task,
         exploration_seeds(args),
         args.formal_seed, args.exploration_collection, mapping[args.sim_gpu],
         limits(episode_seconds), limits(episode_seconds), limits(episode_seconds, 16384),
