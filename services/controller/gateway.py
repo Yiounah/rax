@@ -86,7 +86,7 @@ class Gateway:
             self._token = None
 
     def definitions(self):
-        return self.contract.select([t for t in self.backend.tools() if t["name"] in self.contract.robot_names] + [{
+        definitions = self.contract.select([t for t in self.backend.tools() if t["name"] in self.contract.robot_names] + [{
             "name": "gemini_generate", "description": "OpenRouter-style chat completion via Gemini 3.8 Flash: text/images, JSON schema output and client function calling. Returns the complete assistant message plus usage/cost/API budget; Gemini spending, call and token counts are not limited. Per-request size/output limits still apply. Preserve assistant messages including reasoning_details when sending tool results. Tool calls are data only: your script validates and executes functions; they are never executed for you. Images: {type: image, mimeType: image/png or image/jpeg, data: base64}, or image_url with an inline data URL. No paths, remote URLs or server tools. See gemini skill references/api.md.",
             "inputSchema": {"type": "object", "additionalProperties": False,
                 "required": ["messages"], "properties": {
@@ -103,6 +103,14 @@ class Gateway:
                     "reasoning": {"type": "object", "description": "OpenRouter reasoning options: effort or max_tokens, optionally enabled/exclude. Provider support varies."},
                 }},
         }])
+        if getattr(self.gemini, 'description', None):
+            for tool in definitions:
+                if tool['name'] == 'gemini_generate':
+                    tool['description'] = self.gemini.description
+                    properties = tool['inputSchema']['properties']
+                    for name in ('temperature', 'tools', 'tool_choice', 'reasoning'):
+                        properties.pop(name, None)
+        return definitions
 
     def handle(self, token, request):
         params = request.get('params', {}) if isinstance(request, dict) else {}
@@ -179,7 +187,19 @@ class Gateway:
             self.stage = 'api_validation'
             if self.gemini is None:
                 raise RuntimeError("Gemini is not configured")
-            payload, reservation = self.gemini.prepare(arguments)
+            payload, reservation = self.gemini.prepare(arguments) 
+            if payload.get('_rax_billing_mode') in ('codex_account', 'basal-gemini-cli'):
+                payload['_rax_call_id'] = self.call_id
+                # CLI subscription usage is recorded by the host router. It is not
+                # OpenRouter/Gemini spending and must never enter that price ledger.
+                self.stage = 'provider_request'
+                value, _ = self.gemini.execute(payload, reservation)
+                value['budget'] = {**self.budget(), 'external_perception_billing': payload['_rax_billing_mode'],
+                                   'actual_cost_usd': None}
+                result = {'content': [{'type': 'text', 'text': json.dumps(value, allow_nan=False)}]}
+                self.stage = 'response_recording'
+                self._audit({'event': 'mcp_result', 'tool': name, 'result': result})
+                return result
         # ------------------------------------------------    
         # 这里开始是 Gemini 服务的响应处理。
             cost_reservation = reserve_cost(reservation, payload['max_tokens'])

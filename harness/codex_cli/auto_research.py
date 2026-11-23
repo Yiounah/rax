@@ -737,6 +737,24 @@ def main():
         args.profile = chosen.read_text().strip() if chosen.is_file() else 'openrouter'
     args.key_file = openrouter_key_file(args.key_file)
     config = Configuration.from_dict(json.loads(args.config.read_text()))
+    if (config.agent_cli == 'claude' and config.agent_provider == 'custom'
+            and config.external_perception_provider == 'basal-gemini-cli'):
+        from services.controller.basal_gemini_cli import bridge
+        basal = bridge()
+        if args.claude_base_url or args.claude_key_file or args.claude_model:
+            parser.error('The BASAL profile already selects its bridge, credential and Claude model')
+        args.claude_base_url = 'http://127.0.0.1:%d' % basal['server']['port']
+        args.claude_model = basal['api-keys']['codex'][0]['models'][0]['alias']
+        args.claude_key_file = Path.home()/'.config/rax/basal-loopback.token'
+        if not args.claude_key_file.is_file():
+            parser.error('BASAL loopback credential file is missing')
+        native_bin = Path.home()/'.local/share/basal-a800-tools/clients/node_modules/.bin'
+        if not (native_bin/'claude').is_file():
+            parser.error('The native BASAL Claude executable is missing')
+        os.environ['PATH'] = str(native_bin) + os.pathsep + os.environ.get('PATH', '')
+        # Both model paths use the operator's loopback bridge.
+        for name in ('NO_PROXY', 'no_proxy'):
+            os.environ[name] = ','.join(filter(None, (os.environ.get(name), '127.0.0.1,localhost')))
     from services.controller.config import with_task_timeouts
     config = with_task_timeouts(config)
     def stop(*_):

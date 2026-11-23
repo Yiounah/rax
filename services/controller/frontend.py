@@ -19,7 +19,8 @@ from services.mcp_contract import Contract
 from .errors import public_failure
 from .config import Configuration, with_task_timeouts
 from .gateway import Gateway, complete, sanitized
-from .gemini import GeminiRouter, load_key, MAX_REQUEST_BYTES
+from .gemini import MAX_REQUEST_BYTES
+from .perception import perception_router
 from .recording import read_regular
 from .sandbox import ExecutionDeadline, deadline
 from .supervisor import Supervisor
@@ -478,8 +479,8 @@ def main():
     contract = Contract.from_config(config)
     if contract.environments > 1 and not args.socket:
         raise ValueError('Parallel exploration requires the shared socket endpoint')
-    key = load_key(args.key_file) if config.external_perception else None
-    supervisor = Supervisor(config, lambda: make_backend(config), GeminiRouter(key) if key else None)
+    supervisor = Supervisor(config, lambda: make_backend(config),
+                            perception_router(config, key_file=args.key_file))
     frontend_class = ResearchFrontend
     if config.exploration_envs > 1:
         from services.exploration.research import ParallelResearchFrontend

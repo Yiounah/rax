@@ -206,7 +206,8 @@ class GeminiRouter:
             raise ValueError("Provider response too large")
         return json.loads(raw)
 
-    def prepare(self, arguments):
+    @staticmethod
+    def prepare(arguments):
         """Validate inline images and preserve author prompts.
 
         No external URLs, server tools, provider override, key or arbitrary HTTP fields

@@ -4,3 +4,4 @@ Nothing in this package is exposed to the agent or its bundles; they reach it on
 through MCP (auto_research_agent/api/runtime.py).
 The existing interactive launchers are deliberately not changed by this backend.
 """
+

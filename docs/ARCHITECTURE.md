@@ -1,7 +1,7 @@
 # Architecture
 
 This document describes how a session is built: its services, its isolation
-boundaries, the MCP tool contract, the evaluation lifecycle, and how to extend the
+boundaries, the MCP tool contract, the evaluation lifecycle（生命周期评价）, and how to extend the
 harness with a new simulator backend or session setting. For setup and day-to-day
 use, see [Setup](SETUP.md) and [Usage](USAGE.md). The LIBERO-PRO backend has its own
 document, [LIBERO-PRO backend](LIBERO_PRO_BACKEND.md).

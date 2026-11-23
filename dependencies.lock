@@ -16,6 +16,7 @@ HOST_IMAGEIO_VERSION=2.38.0
 HOST_IMAGEIO_FFMPEG_VERSION=0.6.0
 HOST_SCIPY_VERSION=1.18.1
 HOST_PYTEST_VERSION=9.1.1
+HOST_JSONSCHEMA_VERSION=4.25.1
 # The agent's commands and submitted programs run this environment's Python (harness/agent_host.py):
 # its analysis packages, CPU-only, as the container branch's agent image has them.
 # agent 提交的程序实际跑的 Python 环境（harness/agent_host.py），只装 CPU 版深度学习库。

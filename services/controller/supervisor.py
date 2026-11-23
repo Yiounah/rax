@@ -169,6 +169,7 @@ class Supervisor:
                 self.state.pop('development_reserved_seconds', None)
                 self.state['configuration'].pop('training_seconds', None)
                 self.state['configuration'].setdefault('demonstration_context', 'none')
+                self.state['configuration'].setdefault('external_perception_provider', 'gemini')
                 self.state['configuration'].setdefault('formal_episodes', 1)
                 self.state['configuration'].setdefault('formal_eval_seed', None)
                 self.state['configuration'].setdefault('formal_workers', 1)
