@@ -1,7 +1,7 @@
 """Agent adapters. Import an adapter only when its session needs it."""
 from importlib import import_module
 
-NAMES = ('codex', 'claude', 'dsh', 'kimi')
+NAMES = ('codex', 'claude', 'dsh', 'kimi', 'gemini')
 PROVIDERS = {
     'kimi': ('openrouter', 'moonshot-api', 'kimi-account', 'custom'),
 }
@@ -10,6 +10,7 @@ MODULES = {
     'claude': 'harness.claude_cli.auto_research',
     'dsh': 'harness.deepseek_cli.auto_research',
     'kimi': 'harness.kimi_cli.auto_research',
+    'gemini': 'harness.gemini_adapter',
 }
 
 

@@ -47,8 +47,8 @@ def test_the_operators_credentials_are_hidden_but_not_the_codex_install(tmp_path
 
 
 def test_both_clis_read_the_codex_install_inside_the_hidden_codex_home(tmp_path, host):
-    """Claude Code re-allows reading it inside the hidden ~/.codex; Codex's sandbox cannot, so for
-    Codex ~/.codex is hidden entry by entry, all but the install."""
+    """Codex explicitly exposes the install in an otherwise unreadable host view;
+    Claude Code retains its existing deny/allow rules."""
     from harness.claude_cli import auto_research as claude
     from harness.codex_cli import auto_research as codex
     from test_controller_backend import configuration
@@ -61,8 +61,15 @@ def test_both_clis_read_the_codex_install_inside_the_hidden_codex_home(tmp_path,
     deployed = {'workspace': workspace}
     codex_home = (home/'.codex').resolve()
     filesystem = codex.permissions(config, deployed, tmp_path/'s/mcp.sock')['filesystem']
-    hidden = {path for path, mode in filesystem.items() if mode == 'deny' and path.startswith(str(codex_home))}
-    assert hidden == {str(codex_home/'auth.json'), str(codex_home/'sessions')}
+    assert filesystem[':root'] == 'deny' and filesystem[':minimal'] == 'read'
+    assert filesystem[str(codex_home/'packages')] == 'read'
+    assert str(codex_home) not in filesystem  # Never expose the whole credential home.
+    for private in (codex_home/'auth.json', codex_home/'sessions'):
+        assert not any(not key.startswith(':') and private.is_relative_to(key)
+                       for key, mode in filesystem.items() if mode in ('read', 'write'))
+    assert filesystem[str(config.root.parent.resolve())] == 'deny'
+    assert filesystem[str(workspace.resolve())] == 'write'
+    assert filesystem[str((workspace/'.codex').resolve())] == 'read'
     sandbox = claude.settings(config, deployed, tmp_path/'s/mcp.sock')['sandbox']['filesystem']
     assert str(codex_home) in sandbox['denyRead'] and str(codex_home/'packages') in sandbox['allowRead']
 

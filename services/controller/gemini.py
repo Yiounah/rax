@@ -1,3 +1,8 @@
+# 其中包含Gemini的相关配置和相关工具函数
+# 这里我们需要一个模型，限定是：这个模型可以提供图像输入和目标定位能力的视觉语言模型，例如Qwen-VL系列，替代模型需要稳定返回对象名称、点坐标或边界框，供后续深度程序继续计算。
+# 接入时需要适配图像传输、提示词、返回格式和坐标尺度。例如，模型输出的归一化坐标，需要换算成当前图片的像素坐标。
+# 如果要替代的话这里建议qwen/qwen3-vl-30b-a3b-instruct，Qwen3-VL 的 Instruct 版，能看图，它适合现在这种反复看相机图、指出物体位置、再按 JSON 或函数调用把结果交回控制器的用法。
+# 且30B 里实际激活约 3B，比 235B 更适合一次任务里多次看图，不适合带 thinking 的版本（延迟会变高，且不划算，eg：235B），（8B的版本小物体和像素定位会差一截，可能定位不准）
 """Credential-holding OpenRouter router, with no task/perception prompt logic."""
 from __future__ import annotations
 
@@ -201,7 +206,8 @@ class GeminiRouter:
             raise ValueError("Provider response too large")
         return json.loads(raw)
 
-    def prepare(self, arguments):
+    @staticmethod
+    def prepare(arguments):
         """Validate inline images and preserve author prompts.
 
         No external URLs, server tools, provider override, key or arbitrary HTTP fields

@@ -73,8 +73,14 @@ class Channel:
 
 
 class RemoteGemini:
-    def __init__(self, channel):
+    def __init__(self, channel, *, provider='gemini'):
         self.channel = channel
+        if provider == 'basal-gemini-cli':
+            from .basal_gemini_cli import DESCRIPTION
+            self.description = DESCRIPTION
+        elif provider == 'codex-account':
+            from .codex_vision import DESCRIPTION
+            self.description = DESCRIPTION
 
     def prepare(self, arguments):
         return tuple(self.channel.request('prepare', arguments=arguments))
@@ -87,7 +93,8 @@ class WorkerSupervisor(Supervisor):
     """Charges the parent's session ledger instead of a private one."""
     def __init__(self, config, backend_factory, channel, **kwargs):
         self.channel = channel
-        super().__init__(config, backend_factory, RemoteGemini(channel), **kwargs)
+        super().__init__(config, backend_factory,
+                         RemoteGemini(channel, provider=config.external_perception_provider), **kwargs)
 
     def budget(self):
         return self.channel.request('budget')

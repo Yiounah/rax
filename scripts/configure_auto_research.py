@@ -54,7 +54,7 @@ def arguments():
                         help='Simulator benchmark')
     parser.add_argument('--task-rules', choices=('public', 'code-summary'), default='public',
                         help='TASK.md: the public task definition, or add rules summarized from the official task code')
-    parser.add_argument('--agent-cli', choices=('codex', 'claude', 'dsh', 'kimi'), default='codex',
+    parser.add_argument('--agent-cli', choices=('codex', 'claude', 'dsh', 'kimi', 'gemini'), default='codex',
                         help='Agent CLI backend')
     parser.add_argument('--agent-provider', choices=('openrouter', 'claude-login', 'anthropic', 'custom', 'deepseek-api', 'deepseek-account', 'moonshot-api', 'kimi-account'), default='openrouter',
                         help='Model provider for the selected native agent CLI')
@@ -62,6 +62,8 @@ def arguments():
                         help='Model reasoning effort for the agent CLI')
     parser.add_argument('--external-perception', choices=('on', 'off'), default='on',
                         help='Expose the optional external Gemini perception tool')
+    parser.add_argument('--external-perception-provider', choices=('gemini', 'codex-account', 'basal-gemini-cli'),
+                        default='gemini', help='Host vision service; codex-account uses saved Codex CLI login')
     parser.add_argument('--sim-gpu', required=True, help='Simulator GPU ordinal or UUID (the agent has no GPU)')
     parser.add_argument('--episodes', type=int, default=5)
     parser.add_argument('--observation-profile', choices=('rgbd', 'rgb-only'), default='rgbd')
@@ -108,6 +110,15 @@ def arguments():
 def main():
     parser = arguments()
     args = parser.parse_args()
+    preferences = Path.home()/'.config/rax/basal-cli-defaults.json'
+    if preferences.is_file() and json.loads(preferences.read_text()).get('enabled') is True:
+        if not given('--agent-cli'):
+            args.agent_cli = 'claude'
+        if args.agent_cli == 'claude' and not given('--agent-provider'):
+            args.agent_provider = 'custom'
+        if (args.agent_cli == 'claude' and args.agent_provider == 'custom'
+                and not given('--external-perception-provider')):
+            args.external_perception_provider = 'basal-gemini-cli' 
     if not 1 <= args.episodes <= MAX_EXPLORATION_EPISODES:
         parser.error(f'--episodes must be 1..{MAX_EXPLORATION_EPISODES}')
     if args.recording_gib < 1:
@@ -124,7 +135,8 @@ def main():
     data_bytes = args.recording_gib*1024**3
     def limits(seconds, memory=8192):
         return Limits(seconds, memory, 4, 256, 1024, data_bytes)
-    config = Configuration(root, args.task,
+    # Session storage may be linked from the runtime on shared storage to a local disk.
+    config = Configuration(root.resolve(), args.task,
         exploration_seeds(args),
         args.formal_seed, args.exploration_collection, mapping[args.sim_gpu],
         limits(episode_seconds), limits(episode_seconds), limits(episode_seconds, 16384),
@@ -140,6 +152,7 @@ def main():
         task_rules=args.task_rules, agent_cli=args.agent_cli,
         agent_provider=args.agent_provider, agent_effort=args.agent_effort,
         external_perception=args.external_perception == 'on',
+        external_perception_provider=args.external_perception_provider,
         benchmark=args.benchmark)
     validate_layouts(config)
     # Fetch only official visual media before any model/episode starts; the agent works offline. Deployment converts the selected format to local images.

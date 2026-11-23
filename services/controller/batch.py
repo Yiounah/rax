@@ -1,7 +1,8 @@
 """Operator-only post-hoc formal batch of an already rehearsed, frozen bundle.
 
 Creates a new archive; never reopens or overwrites the source formal attempt.
-No agent process, code edits, API credentials, or episode retries are involved.
+No developing agent, code edits, or episode retries are involved. Optional vision
+is brokered by the host; its credentials never enter the frozen program sandbox.
 """
 import argparse
 from dataclasses import asdict, replace
@@ -16,6 +17,7 @@ from .config import Configuration
 from .errors import describe
 from .storage import persist, verify
 from .supervisor import Supervisor, qualifying_rehearsal
+from .perception import perception_router
 
 REHEARSAL_EVIDENCE = ('task_complete', 'returncode', 'reason', 'finalization_timeout', 'simulator_exited',
                       'evaluation_error', 'evaluation_failure', 'error_type', 'error', 'output_error',
@@ -87,7 +89,7 @@ def main():
     signal.signal(signal.SIGTERM, stop)
     supervisor = None
     try:
-        supervisor = Supervisor(config, lambda: make_backend(config))
+        supervisor = Supervisor(config, lambda: make_backend(config), perception_router(config))
         bundle = import_rehearsed_bundle(supervisor, source, args.bundle)
         print(json.dumps({'status': 'starting', 'output': str(output), 'bundle': bundle,
                           'episodes': config.formal_episodes, 'eval_seed': config.formal_collection,

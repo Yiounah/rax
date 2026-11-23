@@ -4,6 +4,8 @@ The launcher starts the robot service (services.controller.frontend --socket) on
 launch; it owns the episodes and simulators and outlives any one agent process, so the
 CLI's own tool calls and the agent's Python scripts share one serialized server.
 """
+# 这个文件是用于将MCP请求转发到控制器的socket的，主要用于在agent和控制器之间建立一个通信通道，agent通过MCP请求控制器，控制器通过socket返回结果。
+
 import os
 import socket
 import sys

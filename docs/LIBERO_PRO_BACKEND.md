@@ -72,7 +72,7 @@ frozen bundle of a finished session is scored on other collections by post-hoc f
 in parallel:
 
 ```bash
-PYTHONPATH=. runtime/envs/host/bin/python -m services.controller.parallel_batch \
+PYTHONPATH=. runtime/envs/host/bin/python -m services.controller.parallel_batch \  # 用原版探索的session的同一个bundle ID做追加正式测评，得到扰动版的结果，且两者会用同一份控制器来做这个事情，得到同一份代码在两种布局上的表现。
     --source-session <session> --bundle <bundle-id> \
     --output runtime/auto-research/<new-directory> --episodes 50 --workers 4 --eval-seed 2
 ```

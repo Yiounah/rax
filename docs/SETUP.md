@@ -277,3 +277,25 @@ session runs these at once:
 Physics runs on the CPU, so CPU cores bound the concurrency as much as the GPU does. On a
 small machine, lower `--formal-workers` and `--exploration-envs`. Several sessions can share
 a GPU, or use different GPUs.
+
+
+## Yanyu A800 checkout and environment names
+
+This personal checkout is `/data/home/yanyu/rax_libero`, on branch
+`yuna_libero-pro/native`. Keep `libero-pro/native` at the official upstream
+revision; make local changes and new commits on the personal branch.
+
+The host Conda environment is named `rax_libero`, at
+`/data/home/yanyu/rax-runtime/runtime/envs/rax_libero`. The simulator retains
+its separate `libero_pro` environment (Python 3.8). Activate the host with:
+
+```bash
+source ~/.bashrc
+conda activate rax_libero
+cd /data/home/yanyu/rax_libero
+```
+
+Runtime data stays at `/data/home/yanyu/rax-runtime/runtime`, reached through
+the checkout's `runtime` symlink. Compatibility symlinks at
+`/data/home/yanyu/rax` and `runtime/envs/host` preserve existing launcher paths
+and historical experiment references. These are aliases, not extra copies.

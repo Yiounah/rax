@@ -8,7 +8,11 @@ SESSION_LIMIT = None
 # OpenRouter prompt/completion caps are USD per million tokens; request/image
 # caps are per unit. The catalog also reports this model's input-image token rate.
 MAX_PRICE = {'prompt': 0.75, 'completion': 3.75, 'request': 0, 'image': 0.00000075}
-
+# 这里规定了模型调用上限，
+# prompt: 0.75 美元/百万token
+# completion: 3.75 美元/百万token
+# request: 0 美元/请求
+# image: 0.00000075 美元/像素
 
 def nanodollars(cost):
     if type(cost) not in (int, float):

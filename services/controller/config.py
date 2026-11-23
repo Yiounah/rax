@@ -102,6 +102,7 @@ class Configuration:
     agent_cli: str = 'codex'  # 'codex' or 'claude' (harness/claude_cli)
     agent_provider: str = 'openrouter'  # Provider choices depend on the native agent backend.
     external_perception: bool = True  # Optional external Gemini tool; native model vision works without it.
+    external_perception_provider: str = 'gemini'  # Host-brokered; no credentials enter a bundle.
     agent_effort: str = 'xhigh'  # Model reasoning effort for the agent CLI: xhigh or max
     # The session's one evaluation mode. Off (code mode): the agent submits one rehearsed
     # bundle, run alone on the held-out layouts. On (live-copy mode, services/agent_formal):
@@ -164,6 +165,8 @@ class Configuration:
             raise ValueError(f'agent_cli must be one of {NAMES}')
         if type(self.external_perception) is not bool:
             raise ValueError('external_perception must be boolean')
+        if self.external_perception_provider not in ('gemini', 'codex-account', 'basal-gemini-cli'):
+            raise ValueError('external_perception_provider must be gemini, codex-account or basal-gemini-cli')
         providers = ('openrouter', 'deepseek-api', 'deepseek-account', 'custom') if self.agent_cli == 'dsh' else (
             'openrouter', 'claude-login', 'anthropic', 'custom')
         providers = PROVIDERS.get(self.agent_cli, providers)
