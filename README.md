@@ -1,8 +1,10 @@
 # RAX on RoboDojo (experimental Isaac Sim 6 branch)
 
 This checkout adapts RoboDojo to Isaac Sim 6.0.1 in the independent
-`rax_robodojo_isaac6` environment. See [local setup, status and verification](docs/ISAAC6_COMPATIBILITY.md).
-The original 5.1 checkout/environment and host NVIDIA driver are preserved.
+`rax_robodojo` environment. See [local setup, status and verification](docs/ISAAC6_COMPATIBILITY.md).
+The original source/asset storage and host NVIDIA driver are preserved. The old
+Isaac Sim 5.1 environment was removed; `rax_robodojo` now names the retained
+Isaac Sim 6 environment and is the default for both RoboDojo launchers.
 Continue personal development on `yuna_robodojo-behavior/native` in `Yiounah/rax`.
 
 **[Project website](https://robot-agent-exploration.com/)** · [Paper](https://robot-agent-exploration.com/rax.pdf)
@@ -64,9 +66,9 @@ dashboard action is also a terminal command.
 
 ```bash
 cd /home/dodo/code/rax/robodojo-behavior/isaac6
-bash /home/dodo/code/rax/launchers/install-simulator-robodojo.sh --isaac6 --accept-nvidia-eula
+bash /home/dodo/code/rax/launchers/install-simulator-robodojo.sh --accept-nvidia-eula
 bash scripts/check_isaac6_compatibility.sh
-bash /home/dodo/code/rax/launchers/start-dashboard-robodojo.sh --isaac6
+bash /home/dodo/code/rax/launchers/start-dashboard-robodojo.sh
 ```
 
 The full guides:

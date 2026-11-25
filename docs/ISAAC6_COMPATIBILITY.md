@@ -4,8 +4,10 @@ This checkout uses the personal `yuna_robodojo-behavior/native` branch in
 [`Yiounah/rax`](https://github.com/Yiounah/rax/tree/yuna_robodojo-behavior/native).
 It contains the experimental Isaac Sim 6 migration. RoboDojo upstream
 validates Isaac Sim 5.1 only; see [upstream issue 24](https://github.com/RoboDojo-Benchmark/RoboDojo/issues/24).
-The original checkout and `rax_robodojo` environment are preserved. The host NVIDIA
-595.99.02 driver is unchanged.
+The original checkout and shared asset storage are preserved. At the user's request,
+the old Isaac Sim 5.1 environment was removed on 2026-11-25 and the retained
+Isaac Sim 6 environment was renamed to `rax_robodojo`. This name now refers to
+Isaac Sim 6.0.1. The host NVIDIA 595.99.02 driver is unchanged.
 
 ## Environment and entry points
 
@@ -13,7 +15,7 @@ The original checkout and `rax_robodojo` environment are preserved. The host NVI
 | --- | --- |
 | Checkout | `/home/dodo/code/rax/robodojo-behavior/isaac6` |
 | Branch / upstream | `yuna_robodojo-behavior/native` / `origin/yuna_robodojo-behavior/native` |
-| Conda environment | `/home/dodo/system/miniconda3/envs/rax_robodojo_isaac6` |
+| Conda environment | `/home/dodo/system/miniconda3/envs/rax_robodojo` |
 | Python / Isaac Sim | 3.12 / 6.0.1.0 |
 | PyTorch / CUDA toolkit | 2.11.0+cu128 / 12.8 |
 | NumPy / Warp | 2.3.1 / 1.13.0 |
@@ -23,18 +25,18 @@ The original checkout and `rax_robodojo` environment are preserved. The host NVI
 Resume installation with the existing shared installer:
 
 ```bash
-bash /home/dodo/code/rax/launchers/install-simulator-robodojo.sh --isaac6 --accept-nvidia-eula
+bash /home/dodo/code/rax/launchers/install-simulator-robodojo.sh --accept-nvidia-eula
 ```
 
 Start the dashboard:
 
 ```bash
-bash /home/dodo/code/rax/launchers/start-dashboard-robodojo.sh --isaac6
+bash /home/dodo/code/rax/launchers/start-dashboard-robodojo.sh
 ```
 
-Omitting `--isaac6` selects the original 5.1 environment and dashboard port 8766.
-That original simulator currently crashes with the retained 595 driver. LIBERO keeps
-its own environment and port 8765.
+Both RoboDojo launchers default to the retained 6.0.1 environment; `--isaac6` is an
+optional compatibility alias. The dashboard uses port 8767. LIBERO keeps its own
+environment and port 8765.
 
 The three shared launchers are versioned under this checkout's `launchers/` directory;
 `/home/dodo/code/rax/launchers/` links to those files. They retain this machine's
@@ -47,7 +49,7 @@ environment mapping lives outside the checkout at
 
 ## Assets and download state
 
-Both checkouts use the same pinned asset repository. Actual asset files live at:
+The retained environment uses the original pinned asset repository. Actual asset files live at:
 
 ```text
 /home/dodo/code/rax/robodojo-behavior/native/.local-runtime/robodojo-cache/robodojo_assets_repo/Assets
@@ -60,7 +62,9 @@ checkout links to this tree. No second asset copy is needed for the 6.x environm
 Full asset download progress and file-verification status are recorded in the original
 checkout's `runtime/checks/assets-progress.json`. The local downloader verifies actual
 file sizes and SHA-256 hashes against the pinned LFS manifest; directory existence
-alone does not establish completeness. Assets for the `make_kong` smoke check were
+alone does not establish completeness. The downloader now runs with
+`rax_robodojo`; its progress survives retiring the old environment.
+Assets for the `make_kong` smoke check were
 downloaded and verified separately.
 
 Isaac Sim also requires its extension caches. A Python-package-only install cannot
@@ -101,7 +105,7 @@ Static installation checks:
 
 ```bash
 source /home/dodo/system/miniconda3/etc/profile.d/conda.sh
-conda activate rax_robodojo_isaac6
+conda activate rax_robodojo
 cd /home/dodo/code/rax/robodojo-behavior/isaac6
 bash scripts/robodojo_doctor.sh
 ```
@@ -138,6 +142,12 @@ The task-level check passed on 2026-11-25 (`runtime/logs/robodojo6-smoke-assets.
 - cuRobo planned and executed six control blocks; measured final position error
   was 0.0087 mm and rotation error was below 0.0001 radians.
 - The simulator shut down cleanly. No model API calls were made.
+
+After renaming the retained environment to `rax_robodojo`, all 321 installed Python
+package versions were unchanged. Dependency checks, both dashboard entry modes and
+the full 24-step robot check passed again using the new environment path
+(`runtime/logs/robodojo6-smoke-renamed.log`). Conda activation variables and the
+external sandbox environment mapping point to the new prefix.
 
 All four source patches replay successfully from the pinned source commits and
 reproduce the installed files; rerunning source bootstrap is idempotent. The original
