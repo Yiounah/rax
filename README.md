@@ -1,4 +1,9 @@
-# RAX on RoboDojo and BEHAVIOR-1K (native branch)
+# RAX on RoboDojo (experimental Isaac Sim 6 branch)
+
+This checkout adapts RoboDojo to Isaac Sim 6.0.1 in the independent
+`rax_robodojo_isaac6` environment. See [local setup, status and verification](docs/ISAAC6_COMPATIBILITY.md).
+The original 5.1 checkout/environment and host NVIDIA driver are preserved.
+Continue personal development on `yuna_robodojo-behavior/native` in `Yiounah/rax`.
 
 **[Project website](https://robot-agent-exploration.com/)** · [Paper](https://robot-agent-exploration.com/rax.pdf)
 
@@ -19,7 +24,8 @@ agent in an offline Docker container instead.)
 ## Benchmarks
 
 Two simulator backends run side by side behind the same harness, tools contract,
-workspace generator and evaluation lifecycle. Both use Isaac Sim 5.1.
+workspace generator and evaluation lifecycle. This branch targets Isaac Sim 6.0.1 for
+RoboDojo; BEHAVIOR-1K retains its separate Isaac Sim 5.1 environment.
 
 | Backend | Robot | Tasks | Exploration layouts | Formal layouts |
 | --- | --- | --- | --- | --- |
@@ -57,16 +63,10 @@ dashboard action is also a terminal command.
 ## Quick start
 
 ```bash
-git clone <this-repository> rax && cd rax
-export ROBODOJO_RUNTIME_ROOT=/fast-disk/rax/runtime     # where environments, assets and sessions live
-bash scripts/bootstrap_sources.sh                       # pinned RoboDojo + patches, BEHAVIOR-1K source
-bash scripts/setup_robodojo_env.sh --accept-nvidia-eula # Isaac Sim 5.1, Isaac Lab, cuRobo (~23 GB)
-bash scripts/setup_assets.sh                            # RoboDojo assets (~66 GB)
-# Install bubblewrap (and socat for Claude Code), the Codex CLI or Claude Code, and a model
-# credential (docs/SETUP.md, steps 0 and 4), e.g. an OpenRouter key in
-# ~/.codex/secrets/openrouter_api_key.
-bash scripts/robodojo_doctor.sh                         # checks everything above
-bash scripts/run_operator_dashboard.sh                  # prepare and launch sessions
+cd /home/dodo/code/rax/robodojo-behavior/isaac6
+bash /home/dodo/code/rax/launchers/install-simulator-robodojo.sh --isaac6 --accept-nvidia-eula
+bash scripts/check_isaac6_compatibility.sh
+bash /home/dodo/code/rax/launchers/start-dashboard-robodojo.sh --isaac6
 ```
 
 The full guides:

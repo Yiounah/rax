@@ -12,24 +12,28 @@ pass() { echo "PASS  $*"; }
 fail() { echo "FAIL  $*"; failures=$((failures+1)); }
 note() { echo "NOTE  $*"; }
 
-# Sources: the pinned commit, its submodules and both patches.
+# Sources: the pinned commit, its submodules and compatibility patches.
 actual="$(git -C "$ROBODOJO_SOURCE" rev-parse HEAD 2>/dev/null)"
 [[ "$actual" == "$ROBODOJO_COMMIT" ]] && pass "RoboDojo at $ROBODOJO_COMMIT" \
     || fail "RoboDojo is at ${actual:-nothing}, expected $ROBODOJO_COMMIT (scripts/bootstrap_sources.sh)"
 moved="$(git -C "$ROBODOJO_SOURCE" submodule status 2>/dev/null | grep '^[-+U]')"
 [[ -z "$moved" ]] && pass "RoboDojo submodules at their pinned commits" \
     || fail "RoboDojo submodules missing or moved: $moved (scripts/bootstrap_sources.sh)"
-for patch in robodojo.patch robodojo-pr48-drive-reset.patch; do
+for patch in robodojo.patch robodojo-pr48-drive-reset.patch robodojo-isaac6.patch; do
     git -C "$ROBODOJO_SOURCE" apply --reverse --check "$ROBODOJO_PROJECT_ROOT/patches/$patch" >/dev/null 2>&1 \
         && pass "patches/$patch applied" || fail "patches/$patch not applied (scripts/bootstrap_sources.sh)"
 done
+git -C "$ROBODOJO_SOURCE/third_party/IsaacLab" apply --reverse --check \
+    "$ROBODOJO_PROJECT_ROOT/patches/isaaclab-isaac6.patch" >/dev/null 2>&1 \
+    && pass "IsaacLab 6.0.1 compatibility patch applied" \
+    || fail "IsaacLab compatibility patch missing (scripts/bootstrap_sources.sh)"
 
 # Assets.
 missing=()
 for name in Robots Object Material Eval_Layout; do
     [[ -d "$ROBODOJO_SOURCE/Assets/$name" ]] || missing+=("$name")
 done
-[[ ${#missing[@]} -eq 0 ]] && pass "RoboDojo assets present" \
+[[ ${#missing[@]} -eq 0 ]] && pass "RoboDojo asset directories present (file completeness is not checked here)" \
     || fail "RoboDojo assets missing: ${missing[*]} (scripts/setup_assets.sh)"
 assets="$(git -C "$ROBODOJO_RUNTIME_ROOT/robodojo-cache/robodojo_assets_repo" rev-parse HEAD 2>/dev/null)"
 [[ -z "$assets" || "$assets" == "$ROBODOJO_ASSETS_REVISION" ]] \
@@ -86,4 +90,9 @@ fi
 [[ -x "${BEHAVIOR_PYTHON:-$ROBODOJO_RUNTIME_ROOT/envs/behavior/bin/python}" ]] \
     && note "BEHAVIOR environment found; check it with: $ROBODOJO_PYTHON scripts/behavior_doctor.py --gpu 0"
 
-if [[ $failures -eq 0 ]]; then echo "All checks passed."; else echo "$failures check(s) failed."; exit 1; fi
+if [[ $failures -eq 0 ]]; then
+    echo "Static checks passed. Validate real RGB-D, joint motion and planning with scripts/check_isaac6_compatibility.sh."
+else
+    echo "$failures check(s) failed."
+    exit 1
+fi

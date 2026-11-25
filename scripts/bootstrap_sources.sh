@@ -62,6 +62,14 @@ apply_patch_once \
     "$PROJECT_ROOT/RoboDojo" \
     "$PROJECT_ROOT/patches/robodojo-pr48-drive-reset.patch" \
     "$ROBODOJO_DRIVE_RESET_PATCH_SHA256"
+apply_patch_once \
+    "$PROJECT_ROOT/RoboDojo" \
+    "$PROJECT_ROOT/patches/robodojo-isaac6.patch" \
+    "$ROBODOJO_ISAAC6_PATCH_SHA256"
+apply_patch_once \
+    "$PROJECT_ROOT/RoboDojo/third_party/IsaacLab" \
+    "$PROJECT_ROOT/patches/isaaclab-isaac6.patch" \
+    "$ISAACLAB_ISAAC6_PATCH_SHA256"
 
 # BEHAVIOR-1K (optional benchmark): the ~1 GB checkout lives on the runtime storage tier
 # and is exposed at BEHAVIOR-1K/, like the other bulky sources.

@@ -53,13 +53,13 @@ nvcc -V | grep -q "release 12.8" || { echo "nvcc 12.8 not on PATH" >&2; exit 1; 
 
 cd "$BEHAVIOR_SOURCE"
 ./setup.sh --omnigibson --bddl --joylo --eval --primitives --cuda-version 12.8 --accept-nvidia-eula
-# Upstream asks for numpy<2; the working environment has the RoboDojo environment's numpy.
-python -m pip install "numpy==$NUMPY_VERSION"
+# The experimental RoboDojo migration must not change this backend's 5.1 pins.
+python -m pip install "numpy==$BEHAVIOR_NUMPY_VERSION"
 
 # Fail on a missing package or a version other than the pinned ones.
 python - <<PY
 import importlib.metadata as m, sys
-expected = {"isaacsim": "$ISAACSIM_VERSION".rsplit(".", 1)[0], "torch": "$TORCH_VERSION", "numpy": "$NUMPY_VERSION"}
+expected = {"isaacsim": "$BEHAVIOR_ISAACSIM_VERSION".rsplit(".", 1)[0], "torch": "$BEHAVIOR_TORCH_VERSION", "numpy": "$BEHAVIOR_NUMPY_VERSION"}
 bad = []
 for name in ("isaacsim", "torch", "numpy", "omnigibson", "bddl", "nvidia-curobo", "warp-lang"):
     try:

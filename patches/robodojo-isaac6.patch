@@ -1,0 +1,21 @@
+diff --git a/env/environment/base_env.py b/env/environment/base_env.py
+--- a/env/environment/base_env.py
++++ b/env/environment/base_env.py
+@@ -7,7 +7,7 @@
+ from isaaclab_tasks.utils import parse_env_cfg  # this need dynamic import
+ from isaacsim.core.utils.stage import get_current_stage
+ from omegaconf import DictConfig, OmegaConf
+-from omni.physx import acquire_physx_interface
++from omni.physx import get_physx_interface
+ 
+ from env.environment.isaac.isaac_rl_env import IsaacRLEnv
+ from env.seeding import seed_everywhere
+@@ -193,7 +193,7 @@
+         This function will be called after simulation context is created
+         """
+         # enable cpu garment and deformable
+-        self.physics_interface = acquire_physx_interface()
++        self.physics_interface = get_physx_interface()
+         self.physics_interface.overwrite_gpu_setting(1)
+ 
+         # expose physics context

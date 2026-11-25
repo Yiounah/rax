@@ -6,19 +6,25 @@ ROBODOJO_PATCH_SHA256=683efe9421851412585517e72712734fc3b4f8760ac73e90caa33ad2c2
 ROBODOJO_ASSETS_REVISION=91f76c28d93dd20c5fa46ce6a5a1d96a4f384acd
 # Unmerged upstream PR #48 (487e425), isolated from our robot-control patch.
 ROBODOJO_DRIVE_RESET_PATCH_SHA256=bd1b834b60d19f0948adbf737119f567c87b1b0eeaa1aa9ad34635f1d67bca11
+# Compatibility changes to the pinned sources, isolated from the 5.1 checkout.
+ROBODOJO_ISAAC6_PATCH_SHA256=8668bb55c436586559615f4e05a290ec68bce62e2e4c4135f1a4ebfc7915e045
+ISAACLAB_ISAAC6_PATCH_SHA256=8738991ce5af44ebfab33daa6653cd2eda26793f5b50a141b20baca9e9138487
 
-# Known working environments.
+# Experimental Isaac Sim 6.0.1 environment; validate RGB-D and robot stepping before use.
 # Miniforge installs the conda that builds runtime/envs/robodojo and runtime/envs/behavior.
 MINIFORGE_VERSION=26.7.2-0
 MINIFORGE_SHA256=281b0ac7d550802efc81af633225a5e6116d29ae72f3ab4eae7168c3931a4c05
-ISAACSIM_VERSION=5.1.0.0
-TORCH_VERSION=2.7.0+cu128
-NUMPY_VERSION=1.26.0
+ISAACSIM_VERSION=6.0.1.0
+TORCH_VERSION=2.11.0+cu128
+NUMPY_VERSION=2.3.1
 # Host-side workspace generator templates (services/workspace), bundled with Isaac Sim.
-JINJA2_VERSION=3.1.6
+JINJA2_VERSION=3.1.5
 
 # BEHAVIOR-1K simulator backend (2026 challenge evaluation tag), used only by the
 # simulator subprocess in runtime/envs/behavior.
+BEHAVIOR_ISAACSIM_VERSION=5.1.0.0
+BEHAVIOR_TORCH_VERSION=2.7.0+cu128
+BEHAVIOR_NUMPY_VERSION=1.26.0
 BEHAVIOR_URL=https://github.com/StanfordVL/BEHAVIOR-1K.git
 BEHAVIOR_TAG=v3.9.3-post1
 BEHAVIOR_COMMIT=bd049de3119acdcdf2334fe9e1ebe060fa20c108

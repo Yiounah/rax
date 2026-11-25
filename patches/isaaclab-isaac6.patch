@@ -1,0 +1,301 @@
+diff --git a/apps/isaaclab.python.kit b/apps/isaaclab.python.kit
+index 2435019c8..f0abd76af 100644
+--- a/apps/isaaclab.python.kit
++++ b/apps/isaaclab.python.kit
+@@ -13,7 +13,7 @@ keywords = ["experience", "app", "usd"]
+ [dependencies]
+ # Isaac Sim extensions
+ "isaacsim.app.about" = {}
+-"isaacsim.asset.browser" = {}
++# The legacy asset browser was removed in Isaac Sim 6. RoboDojo loads USDs directly.
+ "isaacsim.core.api" = {}
+ "isaacsim.core.cloner" = {}
+ "isaacsim.core.nodes" = {}
+@@ -38,7 +38,8 @@ keywords = ["experience", "app", "usd"]
+ 
+ # Isaac Sim Extra
+ "isaacsim.asset.importer.mjcf" = {}
+-"isaacsim.asset.importer.urdf" = {version = "2.4.31", exact = true}
++# Isaac Sim 6 uses Python 3.12; use its bundled importer, not the 5.1 binary.
++"isaacsim.asset.importer.urdf" = {}
+ "omni.physx.bundle" = {}
+ "omni.physx.tensors" = {}
+ "omni.replicator.core" = {}
+@@ -161,7 +162,7 @@ show_menu_titles = true
+ 
+ [settings.app]
+ name = "Isaac-Sim"
+-version = "5.1.0"
++version = "6.0.1"
+ versionFile = "${exe-path}/VERSION"
+ content.emptyStageOnStart = true
+ fastShutdown = true
+@@ -255,7 +256,7 @@ outDirectory = "${data}"
+ ###############################
+ [settings.exts."omni.kit.registry.nucleus"]
+ registries = [
+-    { name = "kit/default", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/107/shared" },
++    { name = "kit/default", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/110/shared" },
+     { name = "kit/sdk", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/sdk/${kit_version_short}/${kit_git_hash}" },
+     { name = "kit/community", url = "https://dw290v42wisod.cloudfront.net/exts/kit/community" },
+ ]
+diff --git a/source/isaaclab/isaaclab/assets/articulation/articulation.py b/source/isaaclab/isaaclab/assets/articulation/articulation.py
+index b67ded15a..755b3cc5c 100644
+--- a/source/isaaclab/isaaclab/assets/articulation/articulation.py
++++ b/source/isaaclab/isaaclab/assets/articulation/articulation.py
+@@ -16,7 +16,7 @@ import torch
+ import warp as wp
+ from prettytable import PrettyTable
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ from isaacsim.core.simulation_manager import SimulationManager
+ from pxr import PhysxSchema, UsdPhysics
+ 
+diff --git a/source/isaaclab/isaaclab/assets/articulation/articulation_data.py b/source/isaaclab/isaaclab/assets/articulation/articulation_data.py
+index 47902edc0..c2e6f6199 100644
+--- a/source/isaaclab/isaaclab/assets/articulation/articulation_data.py
++++ b/source/isaaclab/isaaclab/assets/articulation/articulation_data.py
+@@ -8,7 +8,7 @@ import weakref
+ 
+ import torch
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ from isaacsim.core.simulation_manager import SimulationManager
+ 
+ import isaaclab.utils.math as math_utils
+diff --git a/source/isaaclab/isaaclab/assets/deformable_object/deformable_object.py b/source/isaaclab/isaaclab/assets/deformable_object/deformable_object.py
+index 12ae6c51a..8dddc506b 100644
+--- a/source/isaaclab/isaaclab/assets/deformable_object/deformable_object.py
++++ b/source/isaaclab/isaaclab/assets/deformable_object/deformable_object.py
+@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
+ 
+ import torch
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ from isaacsim.core.simulation_manager import SimulationManager
+ from pxr import PhysxSchema, UsdShade
+ 
+@@ -66,6 +66,11 @@ class DeformableObject(AssetBase):
+         Args:
+             cfg: A configuration instance.
+         """
++        if not hasattr(physx.SimulationView, "create_soft_body_view"):
++            raise NotImplementedError(
++                "The legacy deformable asset API needs a separate Isaac Sim 6 migration. "
++                "This RoboDojo compatibility branch supports rigid assets and articulations."
++            )
+         super().__init__(cfg)
+ 
+     """
+diff --git a/source/isaaclab/isaaclab/assets/deformable_object/deformable_object_data.py b/source/isaaclab/isaaclab/assets/deformable_object/deformable_object_data.py
+index bb7714383..6b82fd72b 100644
+--- a/source/isaaclab/isaaclab/assets/deformable_object/deformable_object_data.py
++++ b/source/isaaclab/isaaclab/assets/deformable_object/deformable_object_data.py
+@@ -3,11 +3,13 @@
+ #
+ # SPDX-License-Identifier: BSD-3-Clause
+ 
++from __future__ import annotations
++
+ import weakref
+ 
+ import torch
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ 
+ import isaaclab.utils.math as math_utils
+ from isaaclab.utils.buffers import TimestampedBuffer
+diff --git a/source/isaaclab/isaaclab/assets/rigid_object/rigid_object.py b/source/isaaclab/isaaclab/assets/rigid_object/rigid_object.py
+index 6d0ec98f4..556559185 100644
+--- a/source/isaaclab/isaaclab/assets/rigid_object/rigid_object.py
++++ b/source/isaaclab/isaaclab/assets/rigid_object/rigid_object.py
+@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
+ import torch
+ import warp as wp
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ from isaacsim.core.simulation_manager import SimulationManager
+ from pxr import UsdPhysics
+ 
+diff --git a/source/isaaclab/isaaclab/assets/rigid_object/rigid_object_data.py b/source/isaaclab/isaaclab/assets/rigid_object/rigid_object_data.py
+index d1a94f1ea..6a40266d6 100644
+--- a/source/isaaclab/isaaclab/assets/rigid_object/rigid_object_data.py
++++ b/source/isaaclab/isaaclab/assets/rigid_object/rigid_object_data.py
+@@ -7,7 +7,7 @@ import weakref
+ 
+ import torch
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ 
+ import isaaclab.utils.math as math_utils
+ from isaaclab.sim.utils.stage import get_current_stage_id
+diff --git a/source/isaaclab/isaaclab/assets/rigid_object_collection/rigid_object_collection.py b/source/isaaclab/isaaclab/assets/rigid_object_collection/rigid_object_collection.py
+index b458b15b4..8c6280187 100644
+--- a/source/isaaclab/isaaclab/assets/rigid_object_collection/rigid_object_collection.py
++++ b/source/isaaclab/isaaclab/assets/rigid_object_collection/rigid_object_collection.py
+@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
+ import torch
+ import warp as wp
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ from isaacsim.core.simulation_manager import SimulationManager
+ from pxr import UsdPhysics
+ 
+diff --git a/source/isaaclab/isaaclab/assets/rigid_object_collection/rigid_object_collection_data.py b/source/isaaclab/isaaclab/assets/rigid_object_collection/rigid_object_collection_data.py
+index 5156ef729..a1f0d324a 100644
+--- a/source/isaaclab/isaaclab/assets/rigid_object_collection/rigid_object_collection_data.py
++++ b/source/isaaclab/isaaclab/assets/rigid_object_collection/rigid_object_collection_data.py
+@@ -7,7 +7,7 @@ import weakref
+ 
+ import torch
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ 
+ import isaaclab.utils.math as math_utils
+ from isaaclab.sim.utils.stage import get_current_stage_id
+diff --git a/source/isaaclab/isaaclab/envs/mdp/events.py b/source/isaaclab/isaaclab/envs/mdp/events.py
+index 484121f4e..96f1e63a9 100644
+--- a/source/isaaclab/isaaclab/envs/mdp/events.py
++++ b/source/isaaclab/isaaclab/envs/mdp/events.py
+@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Literal
+ import torch
+ 
+ import carb
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ from isaacsim.core.utils.extensions import enable_extension
+ from pxr import Gf, Sdf, UsdGeom, Vt
+ 
+diff --git a/source/isaaclab/isaaclab/sensors/contact_sensor/contact_sensor.py b/source/isaaclab/isaaclab/sensors/contact_sensor/contact_sensor.py
+index 2a85a2661..0c1c0bb14 100644
+--- a/source/isaaclab/isaaclab/sensors/contact_sensor/contact_sensor.py
++++ b/source/isaaclab/isaaclab/sensors/contact_sensor/contact_sensor.py
+@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
+ import torch
+ 
+ import carb
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ from isaacsim.core.simulation_manager import SimulationManager
+ from pxr import PhysxSchema
+ 
+diff --git a/source/isaaclab/isaaclab/sensors/ray_caster/multi_mesh_ray_caster.py b/source/isaaclab/isaaclab/sensors/ray_caster/multi_mesh_ray_caster.py
+index 39be0d7ca..a312f8c4f 100644
+--- a/source/isaaclab/isaaclab/sensors/ray_caster/multi_mesh_ray_caster.py
++++ b/source/isaaclab/isaaclab/sensors/ray_caster/multi_mesh_ray_caster.py
+@@ -15,7 +15,7 @@ import torch
+ import trimesh
+ import warp as wp
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ 
+ import isaaclab.sim as sim_utils
+ from isaaclab.sim.views import XformPrimView
+diff --git a/source/isaaclab/isaaclab/sensors/ray_caster/ray_cast_utils.py b/source/isaaclab/isaaclab/sensors/ray_caster/ray_cast_utils.py
+index 543276e8e..bd3656f04 100644
+--- a/source/isaaclab/isaaclab/sensors/ray_caster/ray_cast_utils.py
++++ b/source/isaaclab/isaaclab/sensors/ray_caster/ray_cast_utils.py
+@@ -9,7 +9,7 @@ from __future__ import annotations
+ 
+ import torch
+ 
+-import omni.physics.tensors.impl.api as physx
++import omni.physics.tensors.api as physx
+ 
+ from isaaclab.sim.views import XformPrimView
+ from isaaclab.utils.math import convert_quat
+diff --git a/source/isaaclab/isaaclab/sim/utils/prims.py b/source/isaaclab/isaaclab/sim/utils/prims.py
+index 6fb7850a5..8058bfc04 100644
+--- a/source/isaaclab/isaaclab/sim/utils/prims.py
++++ b/source/isaaclab/isaaclab/sim/utils/prims.py
+@@ -868,8 +868,11 @@ def bind_physics_material(
+     # check if prim has collision applied on it
+     has_physics_scene_api = prim.HasAPI(PhysxSchema.PhysxSceneAPI)
+     has_collider = prim.HasAPI(UsdPhysics.CollisionAPI)
+-    has_deformable_body = prim.HasAPI(PhysxSchema.PhysxDeformableBodyAPI)
+-    has_particle_system = prim.IsA(PhysxSchema.PhysxParticleSystem)
++    # Isaac Sim 6 removed legacy soft-body schemas; rigid material binding still works.
++    deformable_api = getattr(PhysxSchema, "PhysxDeformableBodyAPI", None)
++    particle_schema = getattr(PhysxSchema, "PhysxParticleSystem", None)
++    has_deformable_body = deformable_api is not None and prim.HasAPI(deformable_api)
++    has_particle_system = particle_schema is not None and prim.IsA(particle_schema)
+     if not (has_physics_scene_api or has_collider or has_deformable_body or has_particle_system):
+         logger.debug(
+             f"Cannot apply physics material '{material_path}' on prim '{prim_path}'. It is neither a"
+diff --git a/source/isaaclab/setup.py b/source/isaaclab/setup.py
+index 369bf5bdf..c76ef0798 100644
+--- a/source/isaaclab/setup.py
++++ b/source/isaaclab/setup.py
+@@ -18,7 +18,7 @@ EXTENSION_TOML_DATA = toml.load(os.path.join(EXTENSION_PATH, "config", "extensio
+ # Minimum dependencies required prior to installation
+ INSTALL_REQUIRES = [
+     # generic
+-    "numpy<2",
++    "numpy==2.3.1",
+     "torch>=2.7",
+     "onnx>=1.18.0",  # 1.16.2 throws access violation on Windows
+     "prettytable==3.3.0",
+@@ -35,7 +35,7 @@ INSTALL_REQUIRES = [
+     "einops",  # needed for transformers, doesn't always auto-install
+     "warp-lang",
+     # make sure this is consistent with isaac sim version
+-    "pillow==11.3.0",
++    "pillow==12.2.0",
+     # livestream
+     "starlette==0.49.1",
+     # testing
+@@ -55,7 +55,7 @@ INSTALL_REQUIRES += [
+     f"pin-pink==3.1.0 ; platform_system == 'Linux' and ({SUPPORTED_ARCHS_ARM})",
+     f"daqp==0.7.2 ; platform_system == 'Linux' and ({SUPPORTED_ARCHS_ARM})",
+     # required by isaaclab.devices.openxr.retargeters.humanoid.fourier.gr1_t2_dex_retargeting_utils
+-    f"dex-retargeting==0.4.6 ; platform_system == 'Linux' and ({SUPPORTED_ARCHS})",
++    f"dex-retargeting==0.5.0 ; platform_system == 'Linux' and ({SUPPORTED_ARCHS})",  # NumPy 2 support
+ ]
+ 
+ PYTORCH_INDEX_URL = ["https://download.pytorch.org/whl/cu128"]
+diff --git a/source/isaaclab_rl/setup.py b/source/isaaclab_rl/setup.py
+index f1cf55d32..33e719121 100644
+--- a/source/isaaclab_rl/setup.py
++++ b/source/isaaclab_rl/setup.py
+@@ -19,7 +19,7 @@ EXTENSION_TOML_DATA = toml.load(os.path.join(EXTENSION_PATH, "config", "extensio
+ # Minimum dependencies required prior to installation
+ INSTALL_REQUIRES = [
+     # generic
+-    "numpy<2",
++    "numpy==2.3.1",
+     "torch>=2.7",
+     "torchvision>=0.14.1",  # ensure compatibility with torch 1.13.1
+     "protobuf>=4.25.8,!=5.26.0",
+@@ -32,8 +32,8 @@ INSTALL_REQUIRES = [
+     # video recording
+     "moviepy",
+     # make sure this is consistent with isaac sim version
+-    "pillow==11.3.0",
+-    "packaging<24",
++    "pillow==12.2.0",
++    "packaging==26.0",  # Isaac Sim 6.0.1 runtime pin
+ ]
+ 
+ PYTORCH_INDEX_URL = ["https://download.pytorch.org/whl/cu128"]
+diff --git a/source/isaaclab_tasks/setup.py b/source/isaaclab_tasks/setup.py
+index 455c56689..b69d30dac 100644
+--- a/source/isaaclab_tasks/setup.py
++++ b/source/isaaclab_tasks/setup.py
+@@ -18,7 +18,7 @@ EXTENSION_TOML_DATA = toml.load(os.path.join(EXTENSION_PATH, "config", "extensio
+ # Minimum dependencies required prior to installation
+ INSTALL_REQUIRES = [
+     # generic
+-    "numpy<2",
++    "numpy==2.3.1",
+     "torch>=2.7",
+     "torchvision>=0.14.1",  # ensure compatibility with torch 1.13.1
+     "protobuf>=4.25.8,!=5.26.0",

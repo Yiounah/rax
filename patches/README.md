@@ -1,7 +1,7 @@
 # RoboDojo patches
 
 `scripts/bootstrap_sources.sh` clones RoboDojo into `RoboDojo/` at the commit pinned in
-`dependencies.lock` and applies these two patches to it. Task rewards, success checks,
+`dependencies.lock` and applies the RoboDojo and IsaacLab patches below. Task rewards, success checks,
 thresholds, layouts and assets are unchanged.
 
 ## `robodojo.patch`
@@ -36,13 +36,25 @@ not only in USD. Positions start from the limit-clipped targets, and angular tar
 converted from degrees to radians. A missing or ambiguous target mapping keeps the
 previous behavior. Revisit the backport when the upstream pin moves.
 
+## Isaac Sim 6 compatibility patches
+
+`robodojo-isaac6.patch` changes RoboDojo's removed PhysX interface entry point to
+`get_physx_interface`. Apply it after the two RoboDojo patches above.
+
+`isaaclab-isaac6.patch` targets the pinned `RoboDojo/third_party/IsaacLab` submodule.
+It aligns dependency and extension pins, migrates the physics tensor import path,
+and allows rigid assets to load without removed soft-body types or schemas. The
+legacy `DeformableObject` constructor explicitly rejects unsupported use on 6.x.
+See [compatibility and validation](../docs/ISAAC6_COMPATIBILITY.md).
+
 ## Applying and checking
 
 Each patch is pinned by its SHA-256 in `dependencies.lock`
-(`ROBODOJO_PATCH_SHA256`, `ROBODOJO_DRIVE_RESET_PATCH_SHA256`). The bootstrap refuses a
+(`ROBODOJO_PATCH_SHA256`, `ROBODOJO_DRIVE_RESET_PATCH_SHA256`,
+`ROBODOJO_ISAAC6_PATCH_SHA256`, `ISAACLAB_ISAAC6_PATCH_SHA256`). The bootstrap refuses a
 patch whose checksum differs, skips a patch that is already applied, and otherwise
 applies it after a dry run, so rerunning it is safe. `bash scripts/robodojo_doctor.sh`
-reports whether both are applied.
+reports whether all four are applied.
 
 To change a patch, apply it alone to a clean checkout of the pinned commit, edit,
 regenerate it with `git diff`, and update its checksum in `dependencies.lock`.
