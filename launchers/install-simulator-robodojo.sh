@@ -19,7 +19,7 @@ if [[ "$accept_eula" != 1 ]]; then
     exit 2
 fi
 environment=rax_robodojo
-checkout=/home/dodo/code/rax/robodojo-behavior/isaac6
+checkout=/home/dodo/code/rax/robodojo-behavior/native
 echo 'Using the Isaac Sim 6.0.1 environment.'
 source /home/dodo/system/miniconda3/etc/profile.d/conda.sh
 conda activate "$environment"

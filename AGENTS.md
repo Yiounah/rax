@@ -2,12 +2,13 @@
 
 - Make future RoboDojo changes on `yuna_robodojo-behavior/native`, tracking
   `origin/yuna_robodojo-behavior/native` in `https://github.com/Yiounah/rax`.
-- The local checkout stays at `/home/dodo/code/rax/robodojo-behavior/isaac6`.
+- The single local checkout is `/home/dodo/code/rax/robodojo-behavior/native`.
   Use Conda environment `rax_robodojo` (Python 3.12, Isaac Sim 6.0.1).
 - The user removed the old Isaac Sim 5.1 installation on 2026-11-25, then renamed
   the retained Isaac Sim 6 environment to `rax_robodojo`. This name now refers to
-  Isaac Sim 6. Retain the original `robodojo-behavior/native` source/asset storage
-  and the separate LIBERO checkout/environment. Keep NVIDIA driver
+  Isaac Sim 6. Code, Git metadata, assets and runtime storage are consolidated in
+  `native`; do not recreate the temporary `isaac6` worktree. Preserve the separate
+  LIBERO checkout/environment. Keep NVIDIA driver
   595.99.02; the user explicitly rejected a driver downgrade.
 - Keep the pinned RoboDojo and IsaacLab sources. Record changes to these ignored
   checkouts in `patches/`, update SHA-256 values in `dependencies.lock`, and verify

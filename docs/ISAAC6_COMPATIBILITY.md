@@ -4,8 +4,8 @@ This checkout uses the personal `yuna_robodojo-behavior/native` branch in
 [`Yiounah/rax`](https://github.com/Yiounah/rax/tree/yuna_robodojo-behavior/native).
 It contains the experimental Isaac Sim 6 migration. RoboDojo upstream
 validates Isaac Sim 5.1 only; see [upstream issue 24](https://github.com/RoboDojo-Benchmark/RoboDojo/issues/24).
-The original checkout and shared asset storage are preserved. At the user's request,
-the old Isaac Sim 5.1 environment was removed on 2026-11-25 and the retained
+Code, Git metadata, assets and runtime storage now live in one checkout, `native`.
+At the user's request, the old Isaac Sim 5.1 environment was removed on 2026-11-25 and the retained
 Isaac Sim 6 environment was renamed to `rax_robodojo`. This name now refers to
 Isaac Sim 6.0.1. The host NVIDIA 595.99.02 driver is unchanged.
 
@@ -13,7 +13,7 @@ Isaac Sim 6.0.1. The host NVIDIA 595.99.02 driver is unchanged.
 
 | Item | Value |
 | --- | --- |
-| Checkout | `/home/dodo/code/rax/robodojo-behavior/isaac6` |
+| Checkout | `/home/dodo/code/rax/robodojo-behavior/native` |
 | Branch / upstream | `yuna_robodojo-behavior/native` / `origin/yuna_robodojo-behavior/native` |
 | Conda environment | `/home/dodo/system/miniconda3/envs/rax_robodojo` |
 | Python / Isaac Sim | 3.12 / 6.0.1.0 |
@@ -40,12 +40,12 @@ environment and port 8765.
 
 The three shared launchers are versioned under this checkout's `launchers/` directory;
 `/home/dodo/code/rax/launchers/` links to those files. They retain this machine's
-absolute Conda and checkout paths. Continue editing and committing in this checkout;
-its directory name remains `isaac6` even though its Git branch has changed.
+absolute Conda and checkout paths. Continue editing and committing in `native` on
+`yuna_robodojo-behavior/native`. The temporary `isaac6` worktree has been retired.
 
 The environment preloads its own `libstdc++.so.6` only while activated. Its sandbox
 environment mapping lives outside the checkout at
-`/home/dodo/system/miniconda3/rax-runtime-envs/robodojo-isaac6`.
+`/home/dodo/system/miniconda3/rax-runtime-envs/robodojo-native`.
 
 ## Assets and download state
 
@@ -56,11 +56,11 @@ The retained environment uses the original pinned asset repository. Actual asset
 ```
 
 The complete `Assets/` tree is 38.44 GiB. The Hugging Face repository contains other,
-much larger datasets that are not part of this download. `RoboDojo/Assets` in each
-checkout links to this tree. No second asset copy is needed for the 6.x environment.
+much larger datasets that are not part of this download. `RoboDojo/Assets` links to
+this tree. Consolidating the directories does not move or duplicate these assets.
 
-Full asset download progress and file-verification status are recorded in the original
-checkout's `runtime/checks/assets-progress.json`. The local downloader verifies actual
+Full asset download progress and file-verification status are recorded in
+`runtime/checks/assets-progress.json`. The local downloader verifies actual
 file sizes and SHA-256 hashes against the pinned LFS manifest; directory existence
 alone does not establish completeness. The downloader now runs with
 `rax_robodojo`; its progress survives retiring the old environment.
@@ -106,7 +106,7 @@ Static installation checks:
 ```bash
 source /home/dodo/system/miniconda3/etc/profile.d/conda.sh
 conda activate rax_robodojo
-cd /home/dodo/code/rax/robodojo-behavior/isaac6
+cd /home/dodo/code/rax/robodojo-behavior/native
 bash scripts/robodojo_doctor.sh
 ```
 
@@ -150,8 +150,16 @@ the full 24-step robot check passed again using the new environment path
 external sandbox environment mapping point to the new prefix.
 
 All four source patches replay successfully from the pinned source commits and
-reproduce the installed files; rerunning source bootstrap is idempotent. The original
-5.1 checkout and IsaacLab sources remain unchanged by the 6.x migration.
+reproduce the installed files; rerunning source bootstrap is idempotent. During
+consolidation, these patches were applied to the existing sources in `native` and
+all six editable packages were reinstalled from that location. The active runtime
+and wheel cache were merged into `native/.local-runtime`; superseded files are kept
+under `runtime/archive/isaac5`.
+
+The consolidated `native` checkout passed the full 24-step RGB-D, joint, FK and
+cuRobo check (`runtime/logs/robodojo6-smoke-consolidated.log`). After removing the
+temporary worktree, all editable-package imports and both dashboard entry modes
+were checked again. Only `native` remains under `robodojo-behavior/`.
 
 This establishes the tested rigid-body task's rendering and control path. It does
 not establish equal benchmark scores or compatibility of every task on 6.x. The
