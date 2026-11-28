@@ -22,30 +22,54 @@ Isaac Sim 6.0.1. The host NVIDIA 595.99.02 driver is unchanged.
 | Dashboard | loopback port 8767 |
 | Simulator concurrency | one exploration environment, one formal worker |
 
-Resume installation with the existing shared installer:
+Start the dashboard with this checkout's launcher:
 
 ```bash
-bash /home/dodo/code/rax/launchers/install-simulator-robodojo.sh --accept-nvidia-eula
+cd /home/dodo/code/rax/robodojo-behavior/native
+bash scripts/run_operator_dashboard.sh
 ```
 
-Start the dashboard:
+It activates the retained 6.0.1 environment automatically; `--isaac6` remains an
+optional compatibility alias. The dashboard uses port 8767. LIBERO's launcher
+lives at `/home/dodo/code/rax/libero-pro/native/scripts/run_operator_dashboard.sh`,
+using its own environment and port 8765.
 
-```bash
-bash /home/dodo/code/rax/launchers/start-dashboard-robodojo.sh
-```
-
-Both RoboDojo launchers default to the retained 6.0.1 environment; `--isaac6` is an
-optional compatibility alias. The dashboard uses port 8767. LIBERO keeps its own
-environment and port 8765.
-
-The three shared launchers are versioned under this checkout's `launchers/` directory;
-`/home/dodo/code/rax/launchers/` links to those files. They retain this machine's
-absolute Conda and checkout paths. Continue editing and committing in `native` on
+Each checkout uses `scripts/run_operator_dashboard.sh` as its only dashboard entry
+point. The additional `launchers/` directories, top-level shortcuts and the
+completed-installation wrapper were removed at the user's request.
+Continue editing and committing RoboDojo in `native` on
 `yuna_robodojo-behavior/native`. The temporary `isaac6` worktree has been retired.
+
+The simulator and assets are installed. If the environment needs rebuilding,
+the underlying setup scripts remain available:
+
+```bash
+cd /home/dodo/code/rax/robodojo-behavior/native
+bash scripts/bootstrap_sources.sh
+bash scripts/setup_robodojo_env.sh --accept-nvidia-eula
+```
+
+`scripts/setup_assets.sh` manages the pinned asset checkout separately. Keep the
+existing asset cache; do not download another copy for normal dashboard use.
 
 The environment preloads its own `libstdc++.so.6` only while activated. Its sandbox
 environment mapping lives outside the checkout at
 `/home/dodo/system/miniconda3/rax-runtime-envs/robodojo-native`.
+
+Environment-local Bash hooks set `CUDA_HOME` and `CUDA_PATH` to the active Conda
+prefix and restore their previous values on deactivation. The environment setup deploys
+these hooks through `scripts/setup_robodojo_cuda.sh`; keep these two variables out
+of `conda env config vars` so activation does not conflict with the system CUDA
+settings in `.bashrc`.
+
+The local Codex model profile lives in `runtime/operator/codex-provider/` and is
+selected by `scripts/start_auto_research_agent.sh`. It references the existing
+ChatGPT login at `/home/dodo/.codex/auth.json`; credentials are not copied into
+the repository. Explicit `--provider-home` and `--profile` flags override this
+checkout's defaults. New sessions use native model vision by default
+(`--external-perception off`), so a ChatGPT login does not also require an
+OpenRouter key for the optional Gemini tool. Enable that tool with
+`--external-perception on` only after configuring its separate OpenRouter key.
 
 ## Assets and download state
 
@@ -62,7 +86,8 @@ this tree. Consolidating the directories does not move or duplicate these assets
 Full asset download progress and file-verification status are recorded in
 `runtime/checks/assets-progress.json`. The local downloader verifies actual
 file sizes and SHA-256 hashes against the pinned LFS manifest; directory existence
-alone does not establish completeness. The downloader now runs with
+alone does not establish completeness. On 2026-11-28 the progress report shows
+all 15,365 files complete, with no failures. The downloader uses
 `rax_robodojo`; its progress survives retiring the old environment.
 Assets for the `make_kong` smoke check were
 downloaded and verified separately.
@@ -70,7 +95,7 @@ downloaded and verified separately.
 Isaac Sim also requires its extension caches. A Python-package-only install cannot
 start the standard 6.0.1 experience because some schema extensions are absent from
 the runtime registries; see [NVIDIA issue 679](https://github.com/isaac-sim/IsaacSim/issues/679).
-The shared installer installs `isaacsim[all,extscache]` by default.
+`scripts/setup_robodojo_env.sh` installs `isaacsim[all,extscache]` by default.
 
 ## Compatibility changes
 

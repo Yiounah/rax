@@ -22,6 +22,7 @@ const elements = {};
 const context = {
   console, URLSearchParams, JSON,
   location: {hash: '#token=test'},
+  window: {addEventListener() {}},
   document: {getElementById: id => (elements[id] ||= element(id)), createElement: element,
              addEventListener() {}},
   navigator: {}, confirm: () => false,

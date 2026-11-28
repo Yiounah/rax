@@ -2,6 +2,7 @@
 import http.client
 from http.server import ThreadingHTTPServer
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -78,6 +79,9 @@ def test_review_lists_live_agent_copies_with_their_records(tmp_path):
     (sim/'sensors.mp4').write_bytes(b'agent copy video')
     aside = session/'agent-formal.interrupted-20260928T150000Z/episode-001/native/results/x/sim'
     write(aside/'summary.json', {'episode_id': 'old', 'step_id': 3})  # Moved aside on resume: not listed.
+    # Explicitly order snapshots; fast writes can share a filesystem timestamp.
+    latest_ns = max(p.stat().st_mtime_ns for p in session.rglob('operator_state.json')) + 1_000_000_000
+    os.utime(sim/'operator_state.json', ns=(latest_ns, latest_ns))
     research = ResearchSessions(root, lambda: ['make_kong'], time.time())
 
     rows = research.episodes(RUN, history=True)
@@ -154,6 +158,31 @@ def test_page_script_uses_only_elements_in_the_page():
     node = shutil.which('node')
     if node:
         subprocess.run([node, '--check', str(STATIC/'app.js')], check=True)
+
+
+def test_dashboard_cookies_are_port_specific_and_expire_on_restart(server, monkeypatch):
+    response, _ = server('POST', '/api/session', 'secret-token')
+    cookie = response.getheader('Set-Cookie').split(';')[0]
+    name, value = cookie.split('=', 1)
+    assert re.fullmatch(r'dashboard_token_\d+', name)
+    assert value == 'secret-token'
+    assert server('GET', '/api/research/state', headers={'Cookie': cookie})[0].status == 200
+    assert server('GET', '/api/research/state', headers={'Cookie': 'dashboard_token=secret-token'})[0].status == 401
+    other_port = int(name.rsplit('_', 1)[1]) + 1
+    other_cookie = f'dashboard_token_{other_port}=secret-token'
+    assert server('GET', '/api/research/state', headers={'Cookie': other_cookie})[0].status == 401
+    assert server('GET', '/api/research/state', headers={
+        'Cookie': f'dashboard_token=libero-token; {cookie}; {other_cookie}'})[0].status == 200
+    assert server('GET', '/api/research/state', 'wrong', headers={'Cookie': cookie})[0].status == 401
+    monkeypatch.setattr(Handler, 'token', 'replacement-token')
+    assert server('GET', '/api/research/state', headers={'Cookie': cookie})[0].status == 401
+    assert server('POST', '/api/session', 'replacement-token')[0].status == 204
+
+
+@pytest.mark.skipif(not shutil.which('node'), reason='node checks dashboard authentication')
+def test_page_authentication_and_reconnection():
+    subprocess.run([shutil.which('node'), str(Path(__file__).with_name('fixtures')/'dashboard_auth.js'),
+                    str(STATIC/'app.js')], check=True, capture_output=True, text=True)
 
 
 def test_an_interrupted_episode_is_over_and_scored_from_its_last_snapshot(tmp_path):

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Experimental Isaac Sim 6.0.1 environment; keeps the upstream 5.1 environment separate.
+# Configure the retained experimental Isaac Sim 6.0.1 environment.
 # Usage: bash scripts/setup_robodojo_env.sh --accept-nvidia-eula
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,6 +27,7 @@ if [[ ! -x "$ROBODOJO_ENV_ROOT/bin/nvcc" || ! -x "$ROBODOJO_ENV_ROOT/bin/bwrap" 
         'cuda-nvcc=12.8.61' 'gxx_linux-64=13' 'libstdcxx-ng>=13' \
         ninja 'bubblewrap=0.11.2' git-lfs ffmpeg
 fi
+bash "$SCRIPT_DIR/setup_robodojo_cuda.sh" "$ROBODOJO_ENV_ROOT"
 set +euo pipefail
 source "$MINIFORGE/bin/activate" "$ROBODOJO_ENV_ROOT"
 set -euo pipefail

@@ -65,12 +65,20 @@ dashboard action is also a terminal command.
 
 ## Quick start
 
+On this configured machine, start the dashboard with:
+
 ```bash
 cd /home/dodo/code/rax/robodojo-behavior/native
-bash /home/dodo/code/rax/launchers/install-simulator-robodojo.sh --accept-nvidia-eula
-bash scripts/check_isaac6_compatibility.sh
-bash /home/dodo/code/rax/launchers/start-dashboard-robodojo.sh
+bash scripts/run_operator_dashboard.sh
 ```
+
+This is the project's only dashboard entry point. It activates `rax_robodojo`
+automatically and serves the dashboard on port 8767; no manual `conda activate` is
+needed. Open the complete URL printed in the terminal, including `#token=...`, or
+add `--open` to open it automatically. The simulator and assets are already
+installed. To check the simulator, run `bash scripts/check_isaac6_compatibility.sh`
+separately. Environment rebuild
+steps are in [the local Isaac Sim 6 guide](docs/ISAAC6_COMPATIBILITY.md).
 
 The full guides:
 

@@ -1,6 +1,6 @@
 // Operator dashboard for auto-research sessions.
-const token = new URLSearchParams(location.hash.slice(1)).get('token') || '';
-const headers = {'X-Operator-Token': token};
+const headers = {};
+let authenticated = false, authAttempt = 0;
 const $ = id => document.getElementById(id);
 // Overview camera first: cam_high (RoboDojo) or cam_head (BEHAVIOR R1Pro), then the wrists.
 const CAMERAS = ['cam_high', 'cam_head', 'cam_left_wrist', 'cam_right_wrist'];
@@ -32,8 +32,16 @@ function text(id, value, className) {
 }
 
 async function api(path, options = {}) {
+  const attempt = authAttempt;
   const response = await fetch(path, {...options, headers: {...headers, ...(options.headers || {})}, cache: 'no-store'});
   const body = await response.json().catch(() => ({}));
+  if (response.status === 401) {
+    if (attempt === authAttempt) {
+      authenticated = false;
+      for (const id of ['prepare', 'launch', 'resume', 'stop']) $(id).disabled = true;
+    }
+    throw new Error('Dashboard access link is missing or expired. Open the complete URL printed by the current dashboard server, including #token=…; restarting the server changes this link.');
+  }
   if (!response.ok) throw new Error(body.error || `${response.status} ${response.statusText}`);
   return body;
 }
@@ -429,16 +437,37 @@ function render() {
 }
 
 async function refresh() {
-  if (busy) return;
+  if (busy || !authenticated) return;
   busy = true;
+  const attempt = authAttempt;
   const requested = [runId(), history()];
   try {
     const value = await api('/api/research/state?'+query({run_id: runId()}));
-    if (JSON.stringify(requested) === JSON.stringify([runId(), history()])) { data = value; render(); }
+    if (attempt === authAttempt && authenticated && JSON.stringify(requested) === JSON.stringify([runId(), history()])) {
+      data = value; render();
+    }
   } catch (error) {
-    text('message', error.message, 'bad');
+    if (attempt === authAttempt) text('message', error.message, 'bad');
   } finally {
     busy = false;
+  }
+}
+
+async function authenticate() {
+  const attempt = ++authAttempt;
+  authenticated = false;
+  for (const id of ['prepare', 'launch', 'resume', 'stop']) $(id).disabled = true;
+  const token = new URLSearchParams(location.hash.slice(1)).get('token');
+  if (token) headers['X-Operator-Token'] = token;
+  else delete headers['X-Operator-Token'];  // An existing valid cookie can also authenticate.
+  try {
+    await api('/api/session', {method: 'POST'});
+    if (attempt !== authAttempt) return;
+    authenticated = true;
+    text('message', '');
+    await refresh();
+  } catch (error) {
+    if (attempt === authAttempt) text('message', error.message, 'bad');
   }
 }
 
@@ -450,7 +479,7 @@ function switchView() {
 
 $('run').addEventListener('change', () => { selected = $('run').value; switchView(); });
 $('history').addEventListener('change', () => { selected = ''; switchView(); });
-$('refresh').addEventListener('click', refresh);
+$('refresh').addEventListener('click', authenticate);
 $('researchForm').addEventListener('input', event => {
   dirty = true;
   if (event.target.name === 'task' && benchmarkOf(event.target.value) !== formBenchmark) {
@@ -516,7 +545,7 @@ $('speed').addEventListener('change', () => { $('video').playbackRate = Number($
 
 // #history=1 opens the dashboard with earlier runs listed.
 $('history').checked = new URLSearchParams(location.hash.slice(1)).get('history') === '1';
-if (!token) text('message', 'Missing operator token: open the URL printed by the dashboard server.', 'bad');
-fetch('/api/session', {method: 'POST', headers}).catch(() => {});  // Cookie for <video> requests.
-refresh();
+// Following a new #token link in this tab does not reload the page.
+window.addEventListener('hashchange', authenticate);
+authenticate();  // Establish the cookie before loading state or <video> requests.
 setInterval(refresh, 1000);

@@ -66,12 +66,17 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, status, message):
         self._json(status, {'error': message})
 
+    @property
+    def cookie_name(self):
+        # Cookies are shared across localhost ports; LIBERO may run alongside us.
+        return f'dashboard_token_{self.server.server_port}'
+
     def _authorized(self):
         supplied = self.headers.get('X-Operator-Token', '')
         if not supplied:
             # <video> requests cannot send headers; POST /api/session sets an HttpOnly cookie.
             try:
-                cookie = SimpleCookie(self.headers.get('Cookie', '')).get('dashboard_token')
+                cookie = SimpleCookie(self.headers.get('Cookie', '')).get(self.cookie_name)
                 supplied = cookie.value if cookie else ''
             except Exception:  # noqa: BLE001 - a malformed cookie is simply unauthorized
                 supplied = ''
@@ -181,7 +186,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == '/api/session':
             self.send_response(HTTPStatus.NO_CONTENT)
-            self.send_header('Set-Cookie', f'dashboard_token={self.token}; HttpOnly; SameSite=Strict; Path=/')
+            self.send_header('Set-Cookie', f'{self.cookie_name}={self.token}; HttpOnly; SameSite=Strict; Path=/')
             self.send_header('Content-Length', '0')
             self.send_header('Cache-Control', 'no-store')
             self.end_headers()

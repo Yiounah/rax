@@ -5,22 +5,34 @@ finished ones. Every action runs the same terminal command described in
 [Usage](../../docs/USAGE.md).
 
 ```bash
-bash scripts/run_operator_dashboard.sh                 # http://127.0.0.1:8765
+bash scripts/run_operator_dashboard.sh                 # http://127.0.0.1:8767
 bash scripts/run_operator_dashboard.sh --port 8800 --open
 ```
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
 | `--host` | `127.0.0.1` | `127.0.0.1`, `localhost` or `::1`. Other addresses are refused: the page is privileged |
-| `--port` | 8765 | Port |
+| `--port` | 8767 | Port (the launcher sets this default) |
 | `--open` | off | Open the URL in a browser |
 
 The script prints a URL with a fresh access token (`#token=...`); open that URL. The
-token is set as a cookie and changes on every start. Never give the URL to an agent.
+token is set as a cookie and changes on every start. Cookies are named per port so
+the RoboDojo and LIBERO dashboards do not overwrite each other's login. Never give the URL to an agent.
+If Task is empty and the page reports a missing or expired access link, open the
+**complete URL from the currently running server**, including `#token=...`.
+Opening just `http://127.0.0.1:8767` does not establish a new login, and a link from a
+previous server process no longer works. Following the new link in an existing tab
+now reconnects without requiring a manual reload. Use `--open` at startup to open
+the correct URL automatically:
+
+```bash
+bash /home/dodo/code/rax/robodojo-behavior/native/scripts/run_operator_dashboard.sh --open
+```
+
 On a remote machine, forward the port and open the printed URL locally:
 
 ```bash
-ssh -L 8765:127.0.0.1:8765 <host>
+ssh -L 8767:127.0.0.1:8767 <host>
 ```
 
 The dashboard holds no session state. Stopping or restarting it stops no agent or

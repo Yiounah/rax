@@ -61,7 +61,7 @@ def arguments():
                         help='Model provider for the selected native agent CLI')
     parser.add_argument('--agent-effort', choices=AGENT_EFFORTS, default='xhigh',
                         help='Model reasoning effort for the agent CLI')
-    parser.add_argument('--external-perception', choices=('on', 'off'), default='on',
+    parser.add_argument('--external-perception', choices=('on', 'off'), default='off',
                         help='Expose the optional external Gemini perception tool')
     parser.add_argument('--sim-gpu', required=True, help='Simulator GPU ordinal or UUID (the agent has no GPU)')
     parser.add_argument('--episodes', type=int, default=5)
