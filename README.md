@@ -59,8 +59,20 @@ dashboard action is also a terminal command.
 
 ## Quick start
 
+On this configured machine, start the dashboard with:
+
 ```bash
-git clone --branch libero-pro/native https://github.com/robot-agent-exploration/rax.git
+cd /home/dodo/code/rax/libero-pro/native
+bash scripts/run_operator_dashboard.sh
+```
+
+This is the project's only dashboard entry point. It activates `rax_libero`
+automatically and uses port 8765; no manual `conda activate` is needed. Open the
+complete URL printed in the terminal, including `#token=...`, or add `--open` to
+open it automatically. The following steps are for a fresh installation:
+
+```bash
+git clone --branch yuna_libero-pro/native https://github.com/Yiounah/rax.git
 cd rax
 export RAX_RUNTIME_ROOT=/fast-disk/rax/runtime            # where environments, data and sessions live
 bash scripts/bootstrap_sources.sh                         # pinned official LIBERO-PRO source
